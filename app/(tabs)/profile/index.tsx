@@ -19,11 +19,11 @@ import {
   User,
   Mail,
   Calendar,
-  ChevronRight,
   Pencil,
   Check,
   X,
   Scissors,
+  ChevronRight,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/hooks/useAuth';
@@ -133,79 +133,85 @@ export default function ProfileScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.avatarSection}>
-        <Pressable onPress={handlePickAvatar} style={styles.avatarWrap}>
-          {user?.avatarUrl ? (
-            <Image
-              source={{ uri: user.avatarUrl }}
-              style={styles.avatar}
-              contentFit="cover"
-              transition={200}
-            />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.initialsText}>{initials}</Text>
-            </View>
-          )}
-          <View style={styles.cameraIcon}>
-            {isUpdating ? (
-              <ActivityIndicator size="small" color={Colors.white} />
+      <View style={styles.profileCard}>
+        <View style={styles.avatarSection}>
+          <Pressable onPress={handlePickAvatar} style={styles.avatarWrap}>
+            {user?.avatarUrl ? (
+              <Image
+                source={{ uri: user.avatarUrl }}
+                style={styles.avatar}
+                contentFit="cover"
+                transition={200}
+              />
             ) : (
-              <Camera color={Colors.white} size={14} />
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.initialsText}>{initials}</Text>
+              </View>
             )}
-          </View>
-        </Pressable>
-      </View>
+            <View style={styles.cameraIcon}>
+              {isUpdating ? (
+                <ActivityIndicator size="small" color={Colors.black} />
+              ) : (
+                <Camera color={Colors.black} size={12} />
+              )}
+            </View>
+          </Pressable>
+        </View>
 
-      <View style={styles.nameSection}>
-        {isEditingName ? (
-          <View style={styles.editNameRow}>
-            <TextInput
-              style={styles.nameInput}
-              value={editName}
-              onChangeText={setEditName}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={handleSaveName}
-              testID="edit-name-input"
-            />
-            <Pressable onPress={handleSaveName} style={styles.editActionBtn} hitSlop={8}>
-              <Check color={Colors.success} size={20} />
-            </Pressable>
+        <View style={styles.nameSection}>
+          {isEditingName ? (
+            <View style={styles.editNameRow}>
+              <TextInput
+                style={styles.nameInput}
+                value={editName}
+                onChangeText={setEditName}
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={handleSaveName}
+                testID="edit-name-input"
+              />
+              <Pressable onPress={handleSaveName} style={styles.editActionBtn} hitSlop={8}>
+                <Check color={Colors.success} size={18} />
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setIsEditingName(false);
+                  setEditName(user?.fullName ?? '');
+                }}
+                style={styles.editActionBtn}
+                hitSlop={8}
+              >
+                <X color={Colors.error} size={18} />
+              </Pressable>
+            </View>
+          ) : (
             <Pressable
               onPress={() => {
-                setIsEditingName(false);
                 setEditName(user?.fullName ?? '');
+                setIsEditingName(true);
               }}
-              style={styles.editActionBtn}
-              hitSlop={8}
+              style={styles.nameRow}
             >
-              <X color={Colors.error} size={20} />
+              <Text style={styles.userName}>{user?.fullName}</Text>
+              <Pencil color={Colors.textMuted} size={13} />
             </Pressable>
-          </View>
-        ) : (
-          <Pressable
-            onPress={() => {
-              setEditName(user?.fullName ?? '');
-              setIsEditingName(true);
-            }}
-            style={styles.nameRow}
-          >
-            <Text style={styles.userName}>{user?.fullName}</Text>
-            <Pencil color={Colors.textMuted} size={14} />
-          </Pressable>
-        )}
-        <Text style={styles.userEmail}>{user?.email}</Text>
+          )}
+          <Text style={styles.userEmail}>{user?.email}</Text>
+        </View>
       </View>
 
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
-          <Scissors color={Colors.accent} size={20} />
+          <View style={styles.statIconWrap}>
+            <Scissors color={Colors.accent} size={16} />
+          </View>
           <Text style={styles.statNumber}>{looks.length}</Text>
           <Text style={styles.statLabel}>Saved Looks</Text>
         </View>
         <View style={styles.statCard}>
-          <Calendar color={Colors.accent} size={20} />
+          <View style={[styles.statIconWrap, { backgroundColor: Colors.tealMuted }]}>
+            <Calendar color={Colors.teal} size={16} />
+          </View>
           <Text style={styles.statNumber}>{memberSince}</Text>
           <Text style={styles.statLabel}>Member Since</Text>
         </View>
@@ -217,23 +223,23 @@ export default function ProfileScreen() {
         <View style={styles.menuCard}>
           <View style={styles.menuItem}>
             <View style={styles.menuItemLeft}>
-              <View style={[styles.menuIcon, { backgroundColor: 'rgba(200,149,108,0.1)' }]}>
-                <User color={Colors.accent} size={18} />
+              <View style={[styles.menuIcon, { backgroundColor: Colors.accentMuted }]}>
+                <User color={Colors.accent} size={16} />
               </View>
               <View>
                 <Text style={styles.menuItemTitle}>Full Name</Text>
                 <Text style={styles.menuItemValue}>{user?.fullName}</Text>
               </View>
             </View>
-            <ChevronRight color={Colors.textMuted} size={18} />
+            <ChevronRight color={Colors.textDim} size={16} />
           </View>
 
           <View style={styles.menuDivider} />
 
           <View style={styles.menuItem}>
             <View style={styles.menuItemLeft}>
-              <View style={[styles.menuIcon, { backgroundColor: 'rgba(76,175,125,0.1)' }]}>
-                <Mail color={Colors.success} size={18} />
+              <View style={[styles.menuIcon, { backgroundColor: Colors.successMuted }]}>
+                <Mail color={Colors.success} size={16} />
               </View>
               <View>
                 <Text style={styles.menuItemTitle}>Email</Text>
@@ -252,7 +258,7 @@ export default function ProfileScreen() {
           style={styles.logoutBtn}
           testID="logout-btn"
         >
-          <LogOut color={Colors.error} size={20} />
+          <LogOut color={Colors.error} size={18} />
           <Text style={styles.logoutText}>Sign Out</Text>
         </Pressable>
       </Animated.View>
@@ -271,33 +277,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  avatarSection: {
+  profileCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
+    padding: 24,
+    marginTop: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
     alignItems: 'center',
-    marginTop: 24,
+  },
+  avatarSection: {
     marginBottom: 16,
   },
   avatarWrap: {
     position: 'relative',
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 2,
     borderColor: Colors.accent,
   },
   avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: Colors.cardBackgroundLight,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: Colors.accent,
   },
   initialsText: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700' as const,
     color: Colors.accent,
   },
@@ -305,18 +319,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: Colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: Colors.background,
   },
   nameSection: {
     alignItems: 'center',
-    marginBottom: 24,
   },
   nameRow: {
     flexDirection: 'row',
@@ -324,12 +337,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   userName: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700' as const,
     color: Colors.text,
   },
   userEmail: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.textSecondary,
     marginTop: 4,
   },
@@ -339,57 +352,66 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   nameInput: {
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: Colors.card,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600' as const,
     color: Colors.text,
     borderWidth: 1,
     borderColor: Colors.accent,
-    minWidth: 180,
+    minWidth: 170,
     textAlign: 'center',
   },
   editActionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.cardBackground,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 28,
+    gap: 10,
+    marginBottom: 24,
   },
   statCard: {
     flex: 1,
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: Colors.surface,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  statIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
   statNumber: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700' as const,
     color: Colors.text,
-    marginTop: 8,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: Colors.textMuted,
     marginTop: 2,
     fontWeight: '500' as const,
+    letterSpacing: 0.3,
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700' as const,
     color: Colors.textMuted,
     letterSpacing: 1.5,
@@ -397,7 +419,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   menuCard: {
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: Colors.surface,
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
@@ -407,28 +429,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: 14,
   },
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    gap: 12,
     flex: 1,
   },
   menuIcon: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   menuItemTitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textMuted,
     fontWeight: '500' as const,
   },
   menuItemValue: {
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.text,
     fontWeight: '600' as const,
     marginTop: 1,
@@ -436,27 +458,27 @@ const styles = StyleSheet.create({
   menuDivider: {
     height: 1,
     backgroundColor: Colors.border,
-    marginLeft: 68,
+    marginLeft: 62,
   },
   logoutBtn: {
-    backgroundColor: 'rgba(224,85,85,0.08)',
+    backgroundColor: Colors.errorMuted,
     borderRadius: 14,
-    paddingVertical: 16,
+    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
     borderWidth: 1,
-    borderColor: 'rgba(224,85,85,0.2)',
+    borderColor: Colors.errorBorder,
   },
   logoutText: {
     color: Colors.error,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600' as const,
   },
   versionText: {
-    color: Colors.textMuted,
-    fontSize: 12,
+    color: Colors.textDim,
+    fontSize: 11,
     textAlign: 'center',
     marginTop: 24,
   },

@@ -5,9 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  Alert,
   Animated,
-  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
@@ -17,9 +15,7 @@ import {
   ChevronLeft,
   Minus,
   Plus,
-  DollarSign,
   Scissors,
-  Star,
   Calendar,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
@@ -76,6 +72,7 @@ export default function FindBarberScreen() {
           headerStyle: { backgroundColor: Colors.background },
           headerTintColor: Colors.text,
           headerTitleStyle: { fontWeight: '700' as const },
+          headerShadowVisible: false,
           headerLeft: () => (
             <Pressable onPress={() => router.back()} hitSlop={12}>
               <ChevronLeft color={Colors.text} size={24} />
@@ -87,12 +84,12 @@ export default function FindBarberScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.heroSection}>
           <View style={styles.heroIconWrap}>
-            <Navigation color={Colors.accent} size={24} />
+            <Navigation color={Colors.accent} size={20} />
           </View>
           <Text style={styles.heroTitle}>Barbers Near You</Text>
           {haircutName ? (
             <Text style={styles.heroSubtitle}>
-              Find a barber who can do your <Text style={styles.heroAccent}>{haircutName}</Text>
+              Find a barber for your <Text style={styles.heroAccent}>{haircutName}</Text>
             </Text>
           ) : (
             <Text style={styles.heroSubtitle}>Browse barbers in your area</Text>
@@ -103,14 +100,14 @@ export default function FindBarberScreen() {
           <Text style={styles.rangeLabel}>SEARCH RADIUS</Text>
           <View style={styles.rangeRow}>
             <Pressable onPress={() => adjustRange(-5)} style={styles.rangeBtn} hitSlop={8} testID="range-minus">
-              <Minus color={Colors.text} size={18} />
+              <Minus color={Colors.text} size={16} />
             </Pressable>
             <View style={styles.rangeValueWrap}>
               <Text style={styles.rangeValue}>{rangeMiles}</Text>
               <Text style={styles.rangeUnit}>miles</Text>
             </View>
             <Pressable onPress={() => adjustRange(5)} style={styles.rangeBtn} hitSlop={8} testID="range-plus">
-              <Plus color={Colors.text} size={18} />
+              <Plus color={Colors.text} size={16} />
             </Pressable>
           </View>
         </View>
@@ -121,7 +118,7 @@ export default function FindBarberScreen() {
 
         {nearbyBarbers.length === 0 ? (
           <View style={styles.emptyCard}>
-            <MapPin color={Colors.textMuted} size={32} />
+            <MapPin color={Colors.textMuted} size={28} />
             <Text style={styles.emptyTitle}>No Barbers Found</Text>
             <Text style={styles.emptySubtext}>Try increasing your search radius</Text>
           </View>
@@ -193,7 +190,7 @@ const BarberCard = React.memo(({
           <View style={styles.barberInfo}>
             <Text style={styles.barberName}>{barber.fullName}</Text>
             <View style={styles.barberLocationRow}>
-              <MapPin color={Colors.textMuted} size={12} />
+              <MapPin color={Colors.textMuted} size={11} />
               <Text style={styles.barberDistance}>{barber.distance.toFixed(1)} mi away</Text>
             </View>
             <Text style={styles.barberAddress} numberOfLines={1}>{barber.location.address}</Text>
@@ -204,7 +201,7 @@ const BarberCard = React.memo(({
 
         {matchingService && (
           <View style={styles.matchBadge}>
-            <Scissors color={Colors.success} size={13} />
+            <Scissors color={Colors.success} size={12} />
             <Text style={styles.matchText}>
               Offers {matchingService.haircutName} — ${matchingService.rate}
             </Text>
@@ -228,8 +225,12 @@ const BarberCard = React.memo(({
           </ScrollView>
         </View>
 
-        <Pressable onPress={onBook} style={styles.bookBtn} testID={`book-${barber.id}`}>
-          <Calendar color={Colors.white} size={18} />
+        <Pressable
+          onPress={onBook}
+          style={({ pressed }) => [styles.bookBtn, pressed && styles.bookBtnPressed]}
+          testID={`book-${barber.id}`}
+        >
+          <Calendar color={Colors.black} size={16} />
           <Text style={styles.bookBtnText}>Book Appointment</Text>
         </Pressable>
       </Pressable>
@@ -243,42 +244,43 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { paddingHorizontal: 20, paddingBottom: 40 },
   heroSection: { alignItems: 'center', paddingVertical: 20 },
-  heroIconWrap: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(200,149,108,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  heroTitle: { fontSize: 24, fontWeight: '800' as const, color: Colors.text, marginBottom: 6 },
+  heroIconWrap: { width: 48, height: 48, borderRadius: 14, backgroundColor: Colors.accentMuted, alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 1, borderColor: Colors.accentBorder },
+  heroTitle: { fontSize: 22, fontWeight: '800' as const, color: Colors.text, marginBottom: 6, letterSpacing: -0.3 },
   heroSubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   heroAccent: { color: Colors.accent, fontWeight: '700' as const },
-  rangeControl: { backgroundColor: Colors.cardBackground, borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: Colors.border },
-  rangeLabel: { fontSize: 10, fontWeight: '700' as const, color: Colors.textMuted, letterSpacing: 1.5, textAlign: 'center', marginBottom: 12 },
+  rangeControl: { backgroundColor: Colors.surface, borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: Colors.border },
+  rangeLabel: { fontSize: 9, fontWeight: '700' as const, color: Colors.textMuted, letterSpacing: 1.5, textAlign: 'center', marginBottom: 12 },
   rangeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
-  rangeBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
+  rangeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: Colors.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
   rangeValueWrap: { alignItems: 'center' },
-  rangeValue: { fontSize: 32, fontWeight: '800' as const, color: Colors.accent },
-  rangeUnit: { fontSize: 12, color: Colors.textMuted, marginTop: -2 },
-  resultsCount: { color: Colors.textSecondary, fontSize: 13, fontWeight: '600' as const, marginBottom: 16 },
-  emptyCard: { backgroundColor: Colors.cardBackground, borderRadius: 16, padding: 40, alignItems: 'center', borderWidth: 1, borderColor: Colors.border, gap: 8 },
-  emptyTitle: { color: Colors.text, fontSize: 18, fontWeight: '700' as const },
-  emptySubtext: { color: Colors.textMuted, fontSize: 13 },
-  barbersList: { gap: 16 },
+  rangeValue: { fontSize: 30, fontWeight: '800' as const, color: Colors.accent },
+  rangeUnit: { fontSize: 11, color: Colors.textMuted, marginTop: -2 },
+  resultsCount: { color: Colors.textSecondary, fontSize: 12, fontWeight: '600' as const, marginBottom: 14 },
+  emptyCard: { backgroundColor: Colors.surface, borderRadius: 16, padding: 40, alignItems: 'center', borderWidth: 1, borderColor: Colors.border, gap: 8 },
+  emptyTitle: { color: Colors.text, fontSize: 17, fontWeight: '700' as const },
+  emptySubtext: { color: Colors.textMuted, fontSize: 12 },
+  barbersList: { gap: 14 },
   barberCard: { marginBottom: 4 },
-  barberCardInner: { backgroundColor: Colors.cardBackground, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: Colors.border },
-  barberTop: { flexDirection: 'row', gap: 14, marginBottom: 12 },
-  barberAvatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: Colors.accent },
-  barberAvatarPlaceholder: { width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.cardBackgroundLight, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: Colors.accent },
-  barberInitials: { fontSize: 20, fontWeight: '700' as const, color: Colors.accent },
+  barberCardInner: { backgroundColor: Colors.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: Colors.border },
+  barberTop: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  barberAvatar: { width: 50, height: 50, borderRadius: 25, borderWidth: 2, borderColor: Colors.accent },
+  barberAvatarPlaceholder: { width: 50, height: 50, borderRadius: 25, backgroundColor: Colors.card, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: Colors.accent },
+  barberInitials: { fontSize: 18, fontWeight: '700' as const, color: Colors.accent },
   barberInfo: { flex: 1, justifyContent: 'center' },
-  barberName: { fontSize: 18, fontWeight: '700' as const, color: Colors.text },
+  barberName: { fontSize: 17, fontWeight: '700' as const, color: Colors.text },
   barberLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
-  barberDistance: { color: Colors.textSecondary, fontSize: 12, fontWeight: '600' as const },
-  barberAddress: { color: Colors.textMuted, fontSize: 12, marginTop: 2 },
+  barberDistance: { color: Colors.textSecondary, fontSize: 11, fontWeight: '600' as const },
+  barberAddress: { color: Colors.textMuted, fontSize: 11, marginTop: 2 },
   barberBio: { color: Colors.textSecondary, fontSize: 13, lineHeight: 18, marginBottom: 12 },
-  matchBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(76,175,125,0.1)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(76,175,125,0.2)' },
-  matchText: { color: Colors.success, fontSize: 13, fontWeight: '600' as const },
+  matchBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.successMuted, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(52,199,123,0.2)' },
+  matchText: { color: Colors.success, fontSize: 12, fontWeight: '600' as const },
   servicesPreview: { marginBottom: 14 },
-  servicesPreviewLabel: { color: Colors.textMuted, fontSize: 11, fontWeight: '600' as const, letterSpacing: 0.5, marginBottom: 8 },
-  serviceChips: { gap: 8 },
-  serviceChip: { flexDirection: 'row', gap: 6, backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: Colors.border },
-  serviceChipText: { color: Colors.textSecondary, fontSize: 12, fontWeight: '500' as const },
-  serviceChipRate: { color: Colors.accent, fontSize: 12, fontWeight: '700' as const },
-  bookBtn: { backgroundColor: Colors.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  bookBtnText: { color: Colors.white, fontSize: 16, fontWeight: '700' as const },
+  servicesPreviewLabel: { color: Colors.textMuted, fontSize: 10, fontWeight: '600' as const, letterSpacing: 0.5, marginBottom: 8 },
+  serviceChips: { gap: 6 },
+  serviceChip: { flexDirection: 'row', gap: 6, backgroundColor: Colors.card, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: Colors.border },
+  serviceChipText: { color: Colors.textSecondary, fontSize: 11, fontWeight: '500' as const },
+  serviceChipRate: { color: Colors.accent, fontSize: 11, fontWeight: '700' as const },
+  bookBtn: { backgroundColor: Colors.accent, borderRadius: 12, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  bookBtnPressed: { opacity: 0.85 },
+  bookBtnText: { color: Colors.black, fontSize: 15, fontWeight: '700' as const },
 });

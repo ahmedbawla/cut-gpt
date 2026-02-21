@@ -10,6 +10,7 @@ export default function SavedLayout() {
         headerTintColor: Colors.text,
         headerTitleStyle: { fontWeight: '700' as const },
         contentStyle: { backgroundColor: Colors.background },
+        headerShadowVisible: false,
       }}
     >
       <Stack.Screen

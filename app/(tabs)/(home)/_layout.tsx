@@ -10,13 +10,13 @@ export default function HomeLayout() {
         headerTintColor: Colors.text,
         headerTitleStyle: { fontWeight: '700' as const },
         contentStyle: { backgroundColor: Colors.background },
+        headerShadowVisible: false,
       }}
     >
       <Stack.Screen
         name="index"
         options={{
-          title: 'Cut-GPT',
-          headerLargeTitle: true,
+          headerShown: false,
         }}
       />
     </Stack>

@@ -145,7 +145,7 @@ function PhotoGalleryModal({
         <View style={galleryStyles.header}>
           <Text style={galleryStyles.title}>{title}</Text>
           <Pressable onPress={onClose} style={galleryStyles.closeBtn} hitSlop={12}>
-            <X color={Colors.white} size={22} />
+            <X color={Colors.white} size={20} />
           </Pressable>
         </View>
 
@@ -156,7 +156,7 @@ function PhotoGalleryModal({
               style={[galleryStyles.navBtn, galleryStyles.navLeft]}
               hitSlop={12}
             >
-              <ChevronLeft color={Colors.white} size={28} />
+              <ChevronLeft color={Colors.white} size={24} />
             </Pressable>
           )}
 
@@ -174,7 +174,7 @@ function PhotoGalleryModal({
               style={[galleryStyles.navBtn, galleryStyles.navRight]}
               hitSlop={12}
             >
-              <ChevronRight color={Colors.white} size={28} />
+              <ChevronRight color={Colors.white} size={24} />
             </Pressable>
           )}
         </View>
@@ -185,12 +185,12 @@ function PhotoGalleryModal({
 
         <View style={galleryStyles.actionRow}>
           <Pressable onPress={handleSaveToDevice} style={galleryStyles.actionBtn}>
-            <ImageDown color={Colors.white} size={18} />
-            <Text style={galleryStyles.actionBtnText}>Save to Device</Text>
+            <ImageDown color={Colors.black} size={16} />
+            <Text style={galleryStyles.actionBtnText}>Save</Text>
           </Pressable>
           <Pressable onPress={handleShare} style={[galleryStyles.actionBtn, galleryStyles.shareActionBtn]}>
-            <Share2 color={Colors.white} size={18} />
-            <Text style={galleryStyles.actionBtnText}>Share</Text>
+            <Share2 color={Colors.white} size={16} />
+            <Text style={[galleryStyles.actionBtnText, galleryStyles.shareActionText]}>Share</Text>
           </Pressable>
         </View>
 
@@ -345,7 +345,9 @@ function SavedLookCard({
       >
         <View style={styles.imagesRow}>
           <View style={styles.imageContainer}>
-            <Text style={styles.imageLabel}>BEFORE</Text>
+            <View style={styles.imageLabelWrap}>
+              <Text style={styles.imageLabel}>BEFORE</Text>
+            </View>
             <Image
               source={{ uri: look.originalPhoto }}
               style={styles.lookImage}
@@ -354,10 +356,13 @@ function SavedLookCard({
             />
           </View>
           <View style={styles.arrowContainer}>
-            <Text style={styles.arrowText}>→</Text>
+            <View style={styles.arrowLine} />
+            <View style={styles.arrowHead} />
           </View>
           <View style={styles.imageContainer}>
-            <Text style={styles.imageLabel}>AFTER</Text>
+            <View style={[styles.imageLabelWrap, styles.imageLabelWrapAfter]}>
+              <Text style={[styles.imageLabel, styles.imageLabelAfter]}>AFTER</Text>
+            </View>
             <Image
               source={{ uri: look.resultPhoto }}
               style={styles.lookImage}
@@ -366,7 +371,7 @@ function SavedLookCard({
             />
             {hasMultipleAngles && (
               <View style={styles.angleBadge}>
-                <Images color={Colors.white} size={12} />
+                <Images color={Colors.white} size={11} />
                 <Text style={styles.angleBadgeText}>{look.anglePhotos?.length}</Text>
               </View>
             )}
@@ -376,10 +381,10 @@ function SavedLookCard({
           <View style={styles.cardInfo}>
             <Text style={styles.haircutName}>{look.haircutName}</Text>
             <View style={styles.dateRow}>
-              <Calendar color={Colors.textMuted} size={12} />
+              <Calendar color={Colors.textMuted} size={11} />
               <Text style={styles.dateText}>{formattedDate}</Text>
               {hasMultipleAngles && (
-                <Text style={styles.tapHint}>Tap to view all angles</Text>
+                <Text style={styles.tapHint}>Tap for all angles</Text>
               )}
             </View>
           </View>
@@ -389,14 +394,14 @@ function SavedLookCard({
               style={styles.cardActionBtn}
               hitSlop={8}
             >
-              <ImageDown color={Colors.accent} size={16} />
+              <ImageDown color={Colors.accent} size={15} />
             </Pressable>
             <Pressable
               onPress={handleShare}
               style={styles.cardActionBtn}
               hitSlop={8}
             >
-              <Share2 color={Colors.success} size={16} />
+              <Share2 color={Colors.teal} size={15} />
             </Pressable>
             <Pressable
               onPress={handleDelete}
@@ -404,7 +409,7 @@ function SavedLookCard({
               hitSlop={8}
               testID={`delete-look-${look.id}`}
             >
-              <Trash2 color={Colors.error} size={16} />
+              <Trash2 color={Colors.error} size={15} />
             </Pressable>
           </View>
         </View>
@@ -436,9 +441,9 @@ export default function SavedScreen() {
     return (
       <View style={styles.emptyContainer}>
         <View style={styles.emptyIconWrap}>
-          <ImageOff color={Colors.textMuted} size={40} />
+          <ImageOff color={Colors.textMuted} size={36} />
         </View>
-        <Text style={styles.emptyTitle}>No Saved Looks Yet</Text>
+        <Text style={styles.emptyTitle}>No Saved Looks</Text>
         <Text style={styles.emptySubtitle}>
           Try on a haircut and save it to see it here
         </Text>
@@ -462,7 +467,7 @@ export default function SavedScreen() {
 const galleryStyles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.95)',
+    backgroundColor: 'rgba(0,0,0,0.96)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -477,14 +482,14 @@ const galleryStyles = StyleSheet.create({
   },
   title: {
     color: Colors.text,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700' as const,
   },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -504,10 +509,10 @@ const galleryStyles = StyleSheet.create({
     position: 'absolute',
     top: '45%',
     zIndex: 10,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -519,47 +524,53 @@ const galleryStyles = StyleSheet.create({
   },
   label: {
     color: Colors.textSecondary,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600' as const,
     marginTop: 12,
+    letterSpacing: 0.5,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     marginTop: 16,
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(200,149,108,0.85)',
-    paddingHorizontal: 16,
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 22,
-  },
-  shareActionBtn: {
-    backgroundColor: 'rgba(76,175,125,0.85)',
+    borderRadius: 10,
   },
   actionBtnText: {
-    color: Colors.white,
+    color: Colors.black,
     fontSize: 13,
     fontWeight: '700' as const,
   },
+  shareActionBtn: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  shareActionText: {
+    color: Colors.white,
+  },
   dots: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     paddingVertical: 24,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
   dotActive: {
     backgroundColor: Colors.accent,
-    width: 24,
-    borderRadius: 4,
+    width: 20,
+    borderRadius: 3,
   },
 });
 
@@ -573,10 +584,10 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   cardWrapper: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   card: {
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: Colors.surface,
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
@@ -589,24 +600,31 @@ const styles = StyleSheet.create({
   imageContainer: {
     flex: 1,
   },
-  imageLabel: {
+  imageLabelWrap: {
     position: 'absolute',
     top: 8,
     left: 8,
     zIndex: 1,
-    fontSize: 9,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  imageLabelWrapAfter: {
+    backgroundColor: 'rgba(201,165,92,0.6)',
+  },
+  imageLabel: {
+    fontSize: 8,
     fontWeight: '700' as const,
     letterSpacing: 1,
     color: Colors.white,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-    overflow: 'hidden',
+  },
+  imageLabelAfter: {
+    color: Colors.white,
   },
   lookImage: {
     width: '100%',
-    height: 200,
+    height: 190,
   },
   angleBadge: {
     position: 'absolute',
@@ -614,27 +632,38 @@ const styles = StyleSheet.create({
     right: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(200,149,108,0.8)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
+    gap: 3,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   angleBadgeText: {
     color: Colors.white,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700' as const,
   },
   arrowContainer: {
-    width: 30,
+    width: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: Colors.surface,
   },
-  arrowText: {
-    color: Colors.accent,
-    fontSize: 18,
-    fontWeight: '700' as const,
+  arrowLine: {
+    width: 1,
+    height: 20,
+    backgroundColor: Colors.accent,
+    opacity: 0.4,
+  },
+  arrowHead: {
+    width: 6,
+    height: 6,
+    borderRightWidth: 1.5,
+    borderBottomWidth: 1.5,
+    borderColor: Colors.accent,
+    transform: [{ rotate: '-45deg' }],
+    marginTop: -3,
+    opacity: 0.6,
   },
   cardFooter: {
     flexDirection: 'row',
@@ -647,8 +676,8 @@ const styles = StyleSheet.create({
   },
   haircutName: {
     color: Colors.text,
-    fontSize: 16,
-    fontWeight: '700' as const,
+    fontSize: 15,
+    fontWeight: '600' as const,
   },
   dateRow: {
     flexDirection: 'row',
@@ -659,11 +688,11 @@ const styles = StyleSheet.create({
   },
   dateText: {
     color: Colors.textMuted,
-    fontSize: 12,
+    fontSize: 11,
   },
   tapHint: {
     color: Colors.accent,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '500' as const,
     marginLeft: 6,
   },
@@ -673,20 +702,20 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   cardActionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.card,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
   },
   deleteBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(224,85,85,0.1)',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: Colors.errorMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -698,24 +727,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.cardBackground,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700' as const,
     color: Colors.text,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
   },
 });

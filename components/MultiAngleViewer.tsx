@@ -179,9 +179,9 @@ export default function MultiAngleViewer({ views, onSavePhoto }: MultiAngleViewe
             testID="play-360-btn"
           >
             {isPlaying ? (
-              <Pause color={Colors.white} size={18} fill={Colors.white} />
+              <Pause color={Colors.white} size={16} fill={Colors.white} />
             ) : (
-              <Play color={Colors.white} size={18} fill={Colors.white} />
+              <Play color={Colors.white} size={16} fill={Colors.white} />
             )}
           </Pressable>
           {onSavePhoto && (
@@ -191,7 +191,7 @@ export default function MultiAngleViewer({ views, onSavePhoto }: MultiAngleViewe
               hitSlop={12}
               testID="save-angle-btn"
             >
-              <Save color={Colors.white} size={16} />
+              <Save color={Colors.black} size={14} />
             </Pressable>
           )}
         </View>
@@ -249,26 +249,28 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 5,
   },
   badge360Text: {
-    color: Colors.white,
-    fontSize: 11,
+    color: Colors.black,
+    fontSize: 10,
     fontWeight: '800' as const,
     letterSpacing: 0.5,
   },
   headerText: {
     color: Colors.textSecondary,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600' as const,
   },
   viewerContainer: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     alignSelf: 'center',
-    borderRadius: 20,
+    borderRadius: 18,
     overflow: 'hidden',
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   imageWrapper: {
     width: '100%',
@@ -280,79 +282,79 @@ const styles = StyleSheet.create({
   },
   angleBadge: {
     position: 'absolute',
-    top: 14,
-    left: 14,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    top: 12,
+    left: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   angleBadgeText: {
     color: Colors.text,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700' as const,
     letterSpacing: 0.5,
   },
   compassContainer: {
     position: 'absolute',
-    top: 14,
-    right: 14,
+    top: 12,
+    right: 12,
   },
   compassOuter: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(200,149,108,0.4)',
+    borderWidth: 1,
+    borderColor: Colors.accentBorder,
   },
   compassNeedle: {
     width: 2,
-    height: 20,
+    height: 18,
     alignItems: 'center',
   },
   needleTip: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: Colors.accent,
   },
   controlsOverlay: {
     position: 'absolute',
-    bottom: 14,
-    right: 14,
+    bottom: 12,
+    right: 12,
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   playBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   savePhotoBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(200,149,108,0.7)',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
   },
   progressBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   progressFill: {
     height: '100%',
@@ -361,26 +363,26 @@ const styles = StyleSheet.create({
   thumbnailRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 10,
-    marginTop: 14,
+    gap: 8,
+    marginTop: 12,
     paddingHorizontal: 8,
   },
   thumbnail: {
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 2,
     borderColor: 'transparent',
-    opacity: 0.6,
+    opacity: 0.5,
   },
   thumbnailActive: {
     borderColor: Colors.accent,
     opacity: 1,
   },
   thumbnailImage: {
-    width: 60,
-    height: 72,
-    borderRadius: 10,
+    width: 56,
+    height: 68,
+    borderRadius: 8,
   },
   thumbLabel: {
     color: Colors.textMuted,

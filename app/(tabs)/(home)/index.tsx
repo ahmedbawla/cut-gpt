@@ -10,7 +10,8 @@ import {
   Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Scissors, Search, X, Heart } from 'lucide-react-native';
+import { Search, X, Heart, Sparkles } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { HAIRCUTS, HAIRCUT_CATEGORIES, HaircutStyle, HaircutCategory } from '@/constants/haircuts';
@@ -21,6 +22,7 @@ type FilterMode = HaircutCategory | 'Favorites';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedCategory, setSelectedCategory] = useState<FilterMode>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
@@ -95,19 +97,19 @@ export default function HomeScreen() {
   const renderHeader = useCallback(
     () => (
       <View style={styles.header}>
-        <View style={styles.heroSection}>
-          <View style={styles.heroIconWrap}>
-            <Scissors color={Colors.accent} size={24} />
+        <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
+          <View>
+            <View style={styles.brandRow}>
+              <Sparkles color={Colors.accent} size={16} />
+              <Text style={styles.brandLabel}>CUT-GPT</Text>
+            </View>
+            <Text style={styles.heroTitle}>Discover{'\n'}Your Style</Text>
           </View>
-          <Text style={styles.heroTitle}>Find Your Style</Text>
-          <Text style={styles.heroSubtitle}>
-            Choose a haircut and see how it looks on you with AI
-          </Text>
         </View>
 
         <View style={styles.searchContainer}>
           <View style={[styles.searchBar, searchFocused && styles.searchBarFocused]}>
-            <Search color={searchFocused ? Colors.accent : Colors.textMuted} size={18} />
+            <Search color={searchFocused ? Colors.accent : Colors.textMuted} size={16} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search haircuts..."
@@ -121,7 +123,7 @@ export default function HomeScreen() {
             />
             {searchQuery.length > 0 && (
               <Pressable onPress={clearSearch} hitSlop={8} testID="clear-search">
-                <X color={Colors.textMuted} size={16} />
+                <X color={Colors.textMuted} size={14} />
               </Pressable>
             )}
           </View>
@@ -148,9 +150,9 @@ export default function HomeScreen() {
               >
                 {isFavFilter && (
                   <Heart
-                    color={isActive ? Colors.white : '#E05555'}
-                    size={13}
-                    fill={isActive ? Colors.white : '#E05555'}
+                    color={isActive ? Colors.black : Colors.error}
+                    size={11}
+                    fill={isActive ? Colors.black : Colors.error}
                   />
                 )}
                 <Text
@@ -161,24 +163,26 @@ export default function HomeScreen() {
                   ]}
                 >
                   {category}
-                  {isFavFilter && favoriteIds.length > 0 ? ` (${favoriteIds.length})` : ''}
+                  {isFavFilter && favoriteIds.length > 0 ? ` ${favoriteIds.length}` : ''}
                 </Text>
               </Pressable>
             );
           })}
         </ScrollView>
 
-        <Text style={styles.sectionTitle}>
-          {selectedCategory === 'All'
-            ? 'All Styles'
-            : selectedCategory === 'Favorites'
-            ? 'Favorites'
-            : selectedCategory}
-          <Text style={styles.countText}> ({filteredHaircuts.length})</Text>
-        </Text>
+        <View style={styles.sectionRow}>
+          <Text style={styles.sectionTitle}>
+            {selectedCategory === 'All'
+              ? 'All Styles'
+              : selectedCategory === 'Favorites'
+              ? 'Favorites'
+              : selectedCategory}
+          </Text>
+          <Text style={styles.countText}>{filteredHaircuts.length}</Text>
+        </View>
       </View>
     ),
-    [selectedCategory, filteredHaircuts.length, handleCategoryPress, searchQuery, searchFocused, handleSearchFocus, handleSearchBlur, clearSearch, favoriteIds.length, allFilters]
+    [selectedCategory, filteredHaircuts.length, handleCategoryPress, searchQuery, searchFocused, handleSearchFocus, handleSearchBlur, clearSearch, favoriteIds.length, allFilters, insets.top]
   );
 
   const renderItem = useCallback(
@@ -193,15 +197,15 @@ export default function HomeScreen() {
       <View style={styles.emptyState}>
         {selectedCategory === 'Favorites' ? (
           <>
-            <Heart color={Colors.textMuted} size={36} />
+            <Heart color={Colors.textMuted} size={32} />
             <Text style={styles.emptyTitle}>No Favorites Yet</Text>
             <Text style={styles.emptySubtitle}>
-              Tap the heart icon on any haircut to save it here
+              Tap the heart on any haircut to save it
             </Text>
           </>
         ) : (
           <>
-            <Search color={Colors.textMuted} size={36} />
+            <Search color={Colors.textMuted} size={32} />
             <Text style={styles.emptyTitle}>No Results</Text>
             <Text style={styles.emptySubtitle}>
               Try a different search or category
@@ -236,74 +240,71 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   listContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingBottom: 32,
   },
   header: {
+    marginBottom: 4,
+  },
+  topBar: {
+    paddingBottom: 20,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 8,
   },
-  heroSection: {
-    alignItems: 'center',
-    paddingVertical: 24,
-  },
-  heroIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(200,149,108,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
+  brandLabel: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: Colors.accent,
+    letterSpacing: 2,
   },
   heroTitle: {
-    fontSize: 26,
+    fontSize: 30,
     fontWeight: '800' as const,
     color: Colors.text,
-    marginBottom: 6,
-  },
-  heroSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 260,
+    lineHeight: 36,
+    letterSpacing: -0.5,
   },
   searchContainer: {
-    marginBottom: 4,
+    marginBottom: 12,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 11,
     gap: 10,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   searchBarFocused: {
-    borderColor: Colors.accent,
-    backgroundColor: 'rgba(200,149,108,0.06)',
+    borderColor: Colors.accentBorder,
+    backgroundColor: Colors.card,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.text,
-    paddingVertical: 2,
+    paddingVertical: 0,
   },
   categoriesContainer: {
-    paddingVertical: 12,
-    gap: 8,
+    paddingVertical: 4,
+    gap: 6,
+    paddingBottom: 12,
   },
   categoryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 18,
-    paddingVertical: 9,
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -312,31 +313,42 @@ const styles = StyleSheet.create({
     borderColor: Colors.accent,
   },
   categoryPillFavorites: {
-    borderColor: 'rgba(224,85,85,0.3)',
-    backgroundColor: 'rgba(224,85,85,0.08)',
+    borderColor: Colors.errorBorder,
+    backgroundColor: Colors.errorMuted,
   },
   categoryText: {
     color: Colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600' as const,
   },
   categoryTextActive: {
-    color: Colors.white,
+    color: Colors.black,
+    fontWeight: '700' as const,
   },
   categoryTextFavorites: {
-    color: '#E05555',
+    color: Colors.error,
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700' as const,
     color: Colors.text,
-    marginTop: 16,
-    marginBottom: 12,
   },
   countText: {
     color: Colors.textMuted,
-    fontWeight: '400' as const,
-    fontSize: 14,
+    fontWeight: '500' as const,
+    fontSize: 13,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
   emptyState: {
     alignItems: 'center',
@@ -345,7 +357,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700' as const,
     color: Colors.text,
     marginTop: 4,

@@ -28,7 +28,7 @@ const HaircutCard = React.memo(({ haircut, onPress, index }: HaircutCardProps) =
 
   const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {
-      toValue: 0.95,
+      toValue: 0.96,
       useNativeDriver: true,
       speed: 50,
       bounciness: 4,
@@ -90,7 +90,8 @@ const HaircutCard = React.memo(({ haircut, onPress, index }: HaircutCardProps) =
           contentFit="cover"
           transition={300}
         />
-        <View style={styles.overlay} />
+        <View style={styles.gradientOverlay} />
+
         <Pressable
           onPress={handleFavorite}
           style={styles.favoriteBtn}
@@ -99,18 +100,18 @@ const HaircutCard = React.memo(({ haircut, onPress, index }: HaircutCardProps) =
         >
           <Animated.View style={{ transform: [{ scale: heartAnim }] }}>
             <Heart
-              color={liked ? '#E05555' : Colors.white}
-              size={18}
-              fill={liked ? '#E05555' : 'transparent'}
+              color={liked ? '#E85050' : 'rgba(255,255,255,0.7)'}
+              size={16}
+              fill={liked ? '#E85050' : 'transparent'}
             />
           </Animated.View>
         </Pressable>
+
         <View style={styles.info}>
-          <Text style={styles.category}>{haircut.category.toUpperCase()}</Text>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryText}>{haircut.category}</Text>
+          </View>
           <Text style={styles.name}>{haircut.name}</Text>
-          <Text style={styles.description} numberOfLines={1}>
-            {haircut.description}
-          </Text>
         </View>
       </Pressable>
     </Animated.View>
@@ -122,63 +123,71 @@ HaircutCard.displayName = 'HaircutCard';
 const styles = StyleSheet.create({
   cardWrapper: {
     width: '50%',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   cardLeft: {
-    paddingRight: 6,
+    paddingRight: 5,
   },
   cardRight: {
-    paddingLeft: 6,
+    paddingLeft: 5,
   },
   card: {
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: Colors.card,
   },
   image: {
     width: '100%',
-    height: 220,
+    height: 210,
   },
-  overlay: {
+  gradientOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.25)',
+    backgroundColor: 'transparent',
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
   },
   favoriteBtn: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    top: 10,
+    right: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   info: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 12,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 10,
+    paddingTop: 28,
+    backgroundColor: 'rgba(0,0,0,0.55)',
   },
-  category: {
+  categoryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(201,165,92,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginBottom: 4,
+  },
+  categoryText: {
     color: Colors.accent,
     fontSize: 9,
     fontWeight: '700' as const,
-    letterSpacing: 1.5,
-    marginBottom: 2,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase' as const,
   },
   name: {
     color: Colors.text,
-    fontSize: 15,
-    fontWeight: '700' as const,
-  },
-  description: {
-    color: Colors.textSecondary,
-    fontSize: 11,
-    marginTop: 2,
+    fontSize: 14,
+    fontWeight: '600' as const,
   },
 });
 

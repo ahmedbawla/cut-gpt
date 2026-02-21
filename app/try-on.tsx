@@ -31,7 +31,6 @@ import {
   Eye,
   Send,
   MessageCircle,
-  Download,
   RefreshCw,
   Share2,
   ImageDown,
@@ -632,6 +631,7 @@ export default function TryOnScreen() {
           headerStyle: { backgroundColor: Colors.background },
           headerTintColor: Colors.text,
           headerTitleStyle: { fontWeight: '700' as const },
+          headerShadowVisible: false,
           presentation: 'modal',
           headerLeft: () => (
             <Pressable onPress={() => router.back()} hitSlop={12}>
@@ -663,9 +663,11 @@ export default function TryOnScreen() {
                 transition={300}
               />
               <View style={styles.haircutPreviewOverlay}>
-                <Text style={styles.haircutPreviewCategory}>
-                  {haircut.category.toUpperCase()}
-                </Text>
+                <View style={styles.previewCategoryBadge}>
+                  <Text style={styles.haircutPreviewCategory}>
+                    {haircut.category}
+                  </Text>
+                </View>
                 <Text style={styles.haircutPreviewName}>{haircut.name}</Text>
                 <Text style={styles.haircutPreviewDesc}>
                   {haircut.description}
@@ -674,7 +676,7 @@ export default function TryOnScreen() {
             </View>
 
             <View style={styles.featureBadge}>
-              <Eye color={Colors.accent} size={14} />
+              <Eye color={Colors.accent} size={13} />
               <Text style={styles.featureBadgeText}>
                 360° preview + AI editor
               </Text>
@@ -695,16 +697,19 @@ export default function TryOnScreen() {
                     style={styles.removePhotoBtn}
                     hitSlop={8}
                   >
-                    <X color={Colors.white} size={16} />
+                    <X color={Colors.white} size={14} />
                   </Pressable>
                 </View>
 
                 <Pressable
                   onPress={() => processImage()}
-                  style={styles.generateBtn}
+                  style={({ pressed }) => [
+                    styles.generateBtn,
+                    pressed && styles.generateBtnPressed,
+                  ]}
                   testID="generate-btn"
                 >
-                  <Sparkles color={Colors.white} size={20} />
+                  <Sparkles color={Colors.black} size={18} />
                   <Text style={styles.generateBtnText}>
                     Generate 360° Preview
                   </Text>
@@ -722,22 +727,28 @@ export default function TryOnScreen() {
                 <View style={styles.photoButtons}>
                   <Pressable
                     onPress={takePhoto}
-                    style={styles.photoOptionBtn}
+                    style={({ pressed }) => [
+                      styles.photoOptionBtn,
+                      pressed && styles.photoOptionBtnPressed,
+                    ]}
                     testID="take-photo-btn"
                   >
                     <View style={styles.photoOptionIcon}>
-                      <Camera color={Colors.accent} size={28} />
+                      <Camera color={Colors.accent} size={24} />
                     </View>
                     <Text style={styles.photoOptionTitle}>Take Selfie</Text>
                     <Text style={styles.photoOptionSub}>Use camera</Text>
                   </Pressable>
                   <Pressable
                     onPress={pickFromGallery}
-                    style={styles.photoOptionBtn}
+                    style={({ pressed }) => [
+                      styles.photoOptionBtn,
+                      pressed && styles.photoOptionBtnPressed,
+                    ]}
                     testID="gallery-btn"
                   >
                     <View style={styles.photoOptionIcon}>
-                      <ImagePlus color={Colors.accent} size={28} />
+                      <ImagePlus color={Colors.accent} size={24} />
                     </View>
                     <Text style={styles.photoOptionTitle}>Gallery</Text>
                     <Text style={styles.photoOptionSub}>Choose photo</Text>
@@ -762,7 +773,7 @@ export default function TryOnScreen() {
                 contentFit="cover"
               />
               <View style={styles.processingOverlay}>
-                <Sparkles color={Colors.accent} size={32} />
+                <Sparkles color={Colors.accent} size={28} />
               </View>
             </Animated.View>
 
@@ -840,7 +851,7 @@ export default function TryOnScreen() {
                     disabled={isSavingToDevice}
                     testID="save-front-device-btn"
                   >
-                    <ImageDown color={Colors.white} size={15} />
+                    <ImageDown color={Colors.black} size={14} />
                     <Text style={styles.frontActionBtnText}>Save</Text>
                   </Pressable>
                   <Pressable
@@ -849,8 +860,8 @@ export default function TryOnScreen() {
                     hitSlop={8}
                     testID="share-front-btn"
                   >
-                    <Share2 color={Colors.white} size={15} />
-                    <Text style={styles.frontActionBtnText}>Share</Text>
+                    <Share2 color={Colors.white} size={14} />
+                    <Text style={[styles.frontActionBtnText, styles.shareBtnText]}>Share</Text>
                   </Pressable>
                 </View>
               </View>
@@ -860,7 +871,7 @@ export default function TryOnScreen() {
 
             <View style={styles.rotationSection}>
               <View style={styles.sectionHeader}>
-                <View style={[styles.sectionDot, { backgroundColor: Colors.success }]} />
+                <View style={[styles.sectionDot, { backgroundColor: Colors.teal }]} />
                 <Text style={styles.sectionHeaderText}>360° WALKTHROUGH</Text>
               </View>
               <MultiAngleViewer
@@ -874,10 +885,13 @@ export default function TryOnScreen() {
             <View style={styles.resultActions}>
               <Pressable
                 onPress={handleSaveAll}
-                style={styles.saveAllBtn}
+                style={({ pressed }) => [
+                  styles.saveAllBtn,
+                  pressed && styles.saveAllBtnPressed,
+                ]}
                 testID="save-all-btn"
               >
-                <Save color={Colors.white} size={20} />
+                <Save color={Colors.black} size={18} />
                 <Text style={styles.saveAllBtnText}>Save to My Looks</Text>
               </Pressable>
 
@@ -890,7 +904,7 @@ export default function TryOnScreen() {
                 {isSavingToDevice ? (
                   <ActivityIndicator size="small" color={Colors.accent} />
                 ) : (
-                  <ImageDown color={Colors.accent} size={20} />
+                  <ImageDown color={Colors.accent} size={18} />
                 )}
                 <Text style={styles.saveDeviceBtnText}>
                   {isSavingToDevice ? 'Saving...' : 'Save All to Device'}
@@ -902,7 +916,7 @@ export default function TryOnScreen() {
                 style={styles.retryBtn}
                 testID="retry-btn"
               >
-                <RotateCcw color={Colors.accent} size={20} />
+                <RotateCcw color={Colors.textSecondary} size={18} />
                 <Text style={styles.retryBtnText}>Start Over</Text>
               </Pressable>
             </View>
@@ -917,10 +931,13 @@ export default function TryOnScreen() {
                   params: { haircutName: haircut.name },
                 });
               }}
-              style={styles.findBarberBtn}
+              style={({ pressed }) => [
+                styles.findBarberBtn,
+                pressed && styles.findBarberBtnPressed,
+              ]}
               testID="find-barber-btn"
             >
-              <Navigation color={Colors.white} size={20} />
+              <Navigation color={Colors.black} size={18} />
               <Text style={styles.findBarberBtnText}>Find a Barber Near You</Text>
             </Pressable>
 
@@ -928,7 +945,7 @@ export default function TryOnScreen() {
 
             <View style={styles.chatSection}>
               <View style={styles.chatHeader}>
-                <MessageCircle color={Colors.accent} size={18} />
+                <MessageCircle color={Colors.accent} size={16} />
                 <Text style={styles.chatHeaderText}>Edit Your Haircut</Text>
               </View>
               <Text style={styles.chatSubtext}>
@@ -984,9 +1001,9 @@ export default function TryOnScreen() {
                   testID="send-edit-btn"
                 >
                   {isRegenerating ? (
-                    <RefreshCw color={Colors.white} size={18} />
+                    <RefreshCw color={Colors.black} size={16} />
                   ) : (
-                    <Send color={Colors.white} size={18} />
+                    <Send color={Colors.black} size={16} />
                   )}
                 </Pressable>
               </View>
@@ -1020,9 +1037,11 @@ const styles = StyleSheet.create({
   },
   haircutPreview: {
     margin: 16,
-    borderRadius: 20,
+    borderRadius: 18,
     overflow: 'hidden',
-    height: 280,
+    height: 260,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   haircutImage: {
     width: '100%',
@@ -1034,14 +1053,23 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingTop: 40,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  previewCategoryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.accentMuted,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginBottom: 6,
   },
   haircutPreviewCategory: {
     color: Colors.accent,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700' as const,
-    letterSpacing: 1.5,
-    marginBottom: 4,
+    letterSpacing: 1,
+    textTransform: 'uppercase' as const,
   },
   haircutPreviewName: {
     color: Colors.text,
@@ -1058,15 +1086,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     gap: 6,
-    backgroundColor: 'rgba(200,149,108,0.12)',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+    backgroundColor: Colors.accentMuted,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.accentBorder,
   },
   featureBadgeText: {
     color: Colors.accent,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600' as const,
   },
   photoSection: {
@@ -1075,7 +1105,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     color: Colors.accent,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700' as const,
     letterSpacing: 1.5,
     marginBottom: 12,
@@ -1083,79 +1113,89 @@ const styles = StyleSheet.create({
   photoHint: {
     color: Colors.textSecondary,
     fontSize: 13,
-    marginBottom: 20,
+    marginBottom: 16,
     lineHeight: 18,
   },
   photoButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   photoOptionBtn: {
     flex: 1,
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: Colors.surface,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  photoOptionBtnPressed: {
+    backgroundColor: Colors.card,
+  },
   photoOptionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(200,149,108,0.1)',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: Colors.accentMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   photoOptionTitle: {
     color: Colors.text,
-    fontSize: 15,
-    fontWeight: '700' as const,
+    fontSize: 14,
+    fontWeight: '600' as const,
     marginBottom: 2,
   },
   photoOptionSub: {
     color: Colors.textMuted,
-    fontSize: 12,
+    fontSize: 11,
   },
   userPhotoContainer: {
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   userPhotoImage: {
     width: '100%',
-    height: 350,
+    height: 340,
     borderRadius: 16,
   },
   removePhotoBtn: {
     position: 'absolute',
     top: 12,
     right: 12,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   generateBtn: {
     backgroundColor: Colors.accent,
-    borderRadius: 14,
+    borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
+  },
+  generateBtnPressed: {
+    opacity: 0.85,
   },
   generateBtnText: {
-    color: Colors.white,
-    fontSize: 17,
+    color: Colors.black,
+    fontSize: 16,
     fontWeight: '700' as const,
   },
   generateHint: {
     color: Colors.textMuted,
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -1167,11 +1207,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   processingImageWrap: {
-    width: 140,
-    height: 180,
-    borderRadius: 20,
+    width: 130,
+    height: 170,
+    borderRadius: 18,
     overflow: 'hidden',
     marginBottom: 28,
+    borderWidth: 1,
+    borderColor: Colors.accentBorder,
   },
   processingImage: {
     width: '100%',
@@ -1179,20 +1221,20 @@ const styles = StyleSheet.create({
   },
   processingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(200,149,108,0.15)',
+    backgroundColor: 'rgba(201,165,92,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   processingTitle: {
     color: Colors.text,
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '700' as const,
     marginBottom: 6,
     textAlign: 'center',
   },
   processingSubtitle: {
     color: Colors.textSecondary,
-    fontSize: 14,
+    fontSize: 13,
     marginBottom: 24,
     textAlign: 'center',
   },
@@ -1201,7 +1243,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   progressTrack: {
-    height: 4,
+    height: 3,
     backgroundColor: Colors.border,
     borderRadius: 2,
     overflow: 'hidden',
@@ -1214,7 +1256,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     color: Colors.textMuted,
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
   },
   angleDotsRow: {
@@ -1228,9 +1270,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   angleDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: Colors.border,
   },
   angleDotDone: {
@@ -1241,15 +1283,15 @@ const styles = StyleSheet.create({
   },
   angleDotLabel: {
     color: Colors.textMuted,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600' as const,
   },
   angleDotLabelDone: {
     color: Colors.success,
   },
   processingNote: {
-    color: Colors.textMuted,
-    fontSize: 12,
+    color: Colors.textDim,
+    fontSize: 11,
   },
   resultContainer: {
     padding: 16,
@@ -1260,10 +1302,11 @@ const styles = StyleSheet.create({
     fontWeight: '800' as const,
     textAlign: 'center',
     marginTop: 8,
+    letterSpacing: -0.3,
   },
   resultSubtitle: {
     color: Colors.accent,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600' as const,
     textAlign: 'center',
     marginBottom: 20,
@@ -1279,49 +1322,56 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: Colors.accent,
   },
   sectionHeaderText: {
-    color: Colors.textSecondary,
-    fontSize: 11,
+    color: Colors.textMuted,
+    fontSize: 10,
     fontWeight: '700' as const,
     letterSpacing: 1.5,
   },
   frontPhotoCard: {
-    borderRadius: 20,
+    borderRadius: 18,
     overflow: 'hidden',
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   frontPhoto: {
     width: '100%',
-    height: 420,
+    height: 400,
   },
   frontPhotoActions: {
     position: 'absolute',
-    bottom: 14,
-    right: 14,
+    bottom: 12,
+    right: 12,
     flexDirection: 'row',
     gap: 8,
   },
   frontActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(200,149,108,0.85)',
+    gap: 4,
+    backgroundColor: Colors.accent,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 8,
   },
   shareBtn: {
-    backgroundColor: 'rgba(76,175,125,0.85)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   frontActionBtnText: {
-    color: Colors.white,
+    color: Colors.black,
     fontSize: 12,
     fontWeight: '700' as const,
+  },
+  shareBtnText: {
+    color: Colors.white,
   },
   divider: {
     height: 1,
@@ -1332,57 +1382,60 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   resultActions: {
-    gap: 12,
+    gap: 10,
   },
   saveAllBtn: {
     backgroundColor: Colors.accent,
-    borderRadius: 14,
+    borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
+  },
+  saveAllBtnPressed: {
+    opacity: 0.85,
   },
   saveAllBtnText: {
-    color: Colors.white,
-    fontSize: 17,
+    color: Colors.black,
+    fontSize: 16,
     fontWeight: '700' as const,
   },
   saveDeviceBtn: {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
     borderWidth: 1,
-    borderColor: Colors.accent,
+    borderColor: Colors.accentBorder,
   },
   saveDeviceBtnText: {
     color: Colors.accent,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600' as const,
   },
   retryBtn: {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   retryBtnText: {
-    color: Colors.accent,
-    fontSize: 17,
+    color: Colors.textSecondary,
+    fontSize: 16,
     fontWeight: '600' as const,
   },
   chatSection: {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 20,
+    backgroundColor: Colors.surface,
+    borderRadius: 18,
     padding: 16,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -1395,21 +1448,21 @@ const styles = StyleSheet.create({
   },
   chatHeaderText: {
     color: Colors.text,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700' as const,
   },
   chatSubtext: {
     color: Colors.textMuted,
-    fontSize: 12,
-    marginBottom: 16,
-    marginLeft: 26,
+    fontSize: 11,
+    marginBottom: 14,
+    marginLeft: 24,
   },
   chatMessages: {
-    gap: 10,
-    marginBottom: 14,
+    gap: 8,
+    marginBottom: 12,
   },
   chatBubble: {
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 12,
     maxWidth: '88%',
   },
@@ -1419,7 +1472,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   chatBubbleAssistant: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: Colors.card,
     alignSelf: 'flex-start',
     borderBottomLeftRadius: 4,
     borderWidth: 1,
@@ -1427,11 +1480,11 @@ const styles = StyleSheet.create({
   },
   chatBubbleText: {
     color: Colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 19,
   },
   chatBubbleTextUser: {
-    color: Colors.white,
+    color: Colors.black,
   },
   loadingRow: {
     flexDirection: 'row',
@@ -1440,49 +1493,52 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: Colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12,
     fontStyle: 'italic' as const,
   },
   chatInputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 10,
+    gap: 8,
   },
   chatInput: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: Colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
     color: Colors.text,
-    fontSize: 15,
+    fontSize: 14,
     maxHeight: 100,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: Colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sendBtnDisabled: {
-    opacity: 0.4,
+    opacity: 0.3,
   },
   findBarberBtn: {
-    backgroundColor: '#4ECDC4',
-    borderRadius: 14,
+    backgroundColor: Colors.teal,
+    borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    gap: 10,
+    gap: 8,
+  },
+  findBarberBtnPressed: {
+    opacity: 0.85,
   },
   findBarberBtnText: {
-    color: Colors.white,
-    fontSize: 17,
+    color: Colors.black,
+    fontSize: 16,
     fontWeight: '700' as const,
   },
 });
