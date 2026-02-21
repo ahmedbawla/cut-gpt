@@ -32,7 +32,7 @@ import { useSavedLooks } from '@/hooks/useSavedLooks';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout, updateProfile } = useAuth();
+  const { user, logout, updateProfile, isLoading } = useAuth();
   const { looks } = useSavedLooks();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(user?.fullName ?? '');
@@ -125,12 +125,26 @@ export default function ProfileScreen() {
       })
     : '';
 
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator color={Colors.accent} size="large" />
+      </View>
+    );
+  }
+
   if (!user) {
     return (
-      <View style={styles.container}>
-        <View style={styles.content}>
-          <ActivityIndicator color={Colors.accent} size="large" />
-        </View>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 32 }]}>
+        <Text style={{ color: Colors.textSecondary, fontSize: 16, textAlign: 'center', marginBottom: 16 }}>
+          You're not signed in
+        </Text>
+        <Pressable
+          onPress={() => router.replace('/login' as any)}
+          style={[styles.logoutBtn, { backgroundColor: Colors.accent, borderColor: Colors.accent }]}
+        >
+          <Text style={[styles.logoutText, { color: '#fff' }]}>Sign In</Text>
+        </Pressable>
       </View>
     );
   }
