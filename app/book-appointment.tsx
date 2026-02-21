@@ -20,6 +20,7 @@ import {
   Scissors,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Colors from '@/constants/colors';
 import { useBarbers } from '@/hooks/useBarbers';
 import { useAuth } from '@/hooks/useAuth';
@@ -68,6 +69,19 @@ export default function BookAppointmentScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isBooked, setIsBooked] = useState(false);
+  const [appointmentImages, setAppointmentImages] = useState<{ frontImage: string; angleImages: string[] } | null>(null);
+
+  React.useEffect(() => {
+    AsyncStorage.getItem('pending_appointment_images')
+      .then((raw) => {
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setAppointmentImages(parsed);
+          console.log('[BookAppointment] Loaded appointment images:', parsed.angleImages?.length, 'angles');
+        }
+      })
+      .catch((err) => console.error('[BookAppointment] Error loading images:', err));
+  }, []);
 
   const days = useMemo(() => getNextDays(14), []);
 
@@ -107,7 +121,11 @@ export default function BookAppointmentScreen() {
         visibleToBarber: true,
         visibleToCustomer: true,
         createdAt: new Date().toISOString(),
+        frontImage: appointmentImages?.frontImage,
+        angleImages: appointmentImages?.angleImages,
       });
+
+      AsyncStorage.removeItem('pending_appointment_images').catch(() => {});
 
       setIsBooked(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

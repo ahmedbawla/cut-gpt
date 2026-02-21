@@ -20,6 +20,7 @@ import * as Haptics from 'expo-haptics';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import { File, Paths } from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Camera,
   ImagePlus,
@@ -1070,8 +1071,18 @@ export default function TryOnScreen() {
             <View style={styles.divider} />
 
             <Pressable
-              onPress={() => {
+              onPress={async () => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                try {
+                  const imageData = {
+                    frontImage: angleViews[0]?.image ?? '',
+                    angleImages: angleViews.map((v) => v.image),
+                  };
+                  await AsyncStorage.setItem('pending_appointment_images', JSON.stringify(imageData));
+                  console.log('[TryOn] Saved appointment images to AsyncStorage');
+                } catch (err) {
+                  console.error('[TryOn] Failed to save appointment images:', err);
+                }
                 router.push({
                   pathname: '/find-barber' as any,
                   params: { haircutName: haircut.name },

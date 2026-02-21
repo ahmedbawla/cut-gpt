@@ -36,6 +36,8 @@ export interface Appointment {
   time: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   createdAt: string;
+  frontImage?: string;
+  angleImages?: string[];
 }
 
 export interface BarberNotification {

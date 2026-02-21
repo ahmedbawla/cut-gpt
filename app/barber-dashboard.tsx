@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Pressable,
   Alert,
   Animated,
+  Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, Stack } from 'expo-router';
@@ -21,16 +22,231 @@ import {
   ChevronLeft,
   Bell,
   CheckCheck,
+  ChevronDown,
+  ChevronUp,
+  ImageIcon,
+  Play,
+  Pause,
+  Eye,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useBarbers } from '@/hooks/useBarbers';
+import { Appointment } from '@/constants/barbers';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const IMAGE_WIDTH = SCREEN_WIDTH - 80;
+const IMAGE_HEIGHT = IMAGE_WIDTH * 1.33;
+
+interface AppointmentCardProps {
+  apt: Appointment;
+}
+
+const AppointmentImageViewer = React.memo(({ angleImages }: { angleImages: string[] }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const angleLabels = ['Front', 'Left', 'Right', 'Back'];
+
+  const transitionToIndex = useCallback((nextIndex: number) => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setActiveIndex(nextIndex);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [fadeAnim]);
+
+  const togglePlayback = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (isPlaying) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = null;
+      setIsPlaying(false);
+    } else {
+      setIsPlaying(true);
+      let idx = activeIndex;
+      intervalRef.current = setInterval(() => {
+        idx = (idx + 1) % angleImages.length;
+        transitionToIndex(idx);
+      }, 1800);
+    }
+  }, [isPlaying, activeIndex, angleImages.length, transitionToIndex]);
+
+  React.useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  return (
+    <View style={imgStyles.container}>
+      <View style={imgStyles.imageWrap}>
+        <Animated.View style={{ opacity: fadeAnim }}>
+          <Image
+            source={{ uri: angleImages[activeIndex] }}
+            style={imgStyles.image}
+            contentFit="cover"
+            transition={150}
+          />
+        </Animated.View>
+        <View style={imgStyles.labelBadge}>
+          <Text style={imgStyles.labelText}>
+            {angleLabels[activeIndex] ?? `Angle ${activeIndex + 1}`}
+          </Text>
+        </View>
+      </View>
+
+      <View style={imgStyles.controls}>
+        <View style={imgStyles.dots}>
+          {angleImages.map((_, i) => (
+            <Pressable
+              key={i}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (isPlaying) {
+                  if (intervalRef.current) clearInterval(intervalRef.current);
+                  intervalRef.current = null;
+                  setIsPlaying(false);
+                }
+                transitionToIndex(i);
+              }}
+              hitSlop={6}
+            >
+              <View
+                style={[
+                  imgStyles.dot,
+                  i === activeIndex && imgStyles.dotActive,
+                ]}
+              />
+            </Pressable>
+          ))}
+        </View>
+        <Pressable onPress={togglePlayback} style={imgStyles.playBtn} hitSlop={8}>
+          {isPlaying ? (
+            <Pause color={Colors.black} size={14} />
+          ) : (
+            <Play color={Colors.black} size={14} />
+          )}
+          <Text style={imgStyles.playText}>{isPlaying ? 'Pause' : '360° View'}</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+});
+
+AppointmentImageViewer.displayName = 'AppointmentImageViewer';
+
+const AppointmentCard = React.memo(({ apt }: AppointmentCardProps) => {
+  const [expanded, setExpanded] = useState(false);
+  const heightAnim = useRef(new Animated.Value(0)).current;
+  const hasImages = !!(apt.frontImage || (apt.angleImages && apt.angleImages.length > 0));
+
+  const toggleExpand = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const toValue = expanded ? 0 : 1;
+    setExpanded(!expanded);
+    Animated.spring(heightAnim, {
+      toValue,
+      useNativeDriver: false,
+      speed: 14,
+      bounciness: 2,
+    }).start();
+  }, [expanded, heightAnim]);
+
+  const expandHeight = heightAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, apt.angleImages && apt.angleImages.length > 0 ? IMAGE_HEIGHT + 120 : apt.frontImage ? IMAGE_HEIGHT + 60 : 0],
+  });
+
+  return (
+    <View style={styles.appointmentCard}>
+      <Pressable onPress={hasImages ? toggleExpand : undefined} style={styles.appointmentCardInner}>
+        <View style={styles.appointmentTop}>
+          <View style={styles.appointmentLeft}>
+            <View style={styles.clientIconWrap}>
+              <User color={Colors.accent} size={14} />
+            </View>
+            <Text style={styles.appointmentClient}>{apt.customerName}</Text>
+          </View>
+          <View style={{ flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6 }}>
+            {hasImages && (
+              <View style={styles.hasImagesBadge}>
+                <ImageIcon color={Colors.teal} size={10} />
+              </View>
+            )}
+            <View style={[styles.statusBadge, apt.status === 'confirmed' ? styles.statusConfirmed : styles.statusPending]}>
+              <Text style={[styles.statusText, apt.status === 'confirmed' ? styles.statusTextConfirmed : styles.statusTextPending]}>{apt.status}</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.appointmentDetails}>
+          <Text style={styles.appointmentService}>{apt.haircutName}</Text>
+          <Text style={styles.appointmentTime}>{apt.date} at {apt.time}</Text>
+          <Text style={styles.appointmentRate}>${apt.rate}</Text>
+        </View>
+        {hasImages && (
+          <View style={styles.expandHint}>
+            <Eye color={Colors.textMuted} size={12} />
+            <Text style={styles.expandHintText}>
+              {expanded ? 'Hide customer rendering' : 'View customer rendering'}
+            </Text>
+            {expanded ? (
+              <ChevronUp color={Colors.textMuted} size={14} />
+            ) : (
+              <ChevronDown color={Colors.textMuted} size={14} />
+            )}
+          </View>
+        )}
+      </Pressable>
+
+      {hasImages && (
+        <Animated.View style={[styles.imageSection, { height: expandHeight, overflow: 'hidden' as const }]}>
+          {expanded && (
+            <View style={styles.imageSectionInner}>
+              <View style={styles.imageSectionHeader}>
+                <View style={styles.imageSectionDot} />
+                <Text style={styles.imageSectionTitle}>CUSTOMER'S AI RENDERING</Text>
+              </View>
+
+              {apt.angleImages && apt.angleImages.length > 1 ? (
+                <AppointmentImageViewer angleImages={apt.angleImages} />
+              ) : apt.frontImage ? (
+                <View style={imgStyles.container}>
+                  <View style={imgStyles.imageWrap}>
+                    <Image
+                      source={{ uri: apt.frontImage }}
+                      style={imgStyles.image}
+                      contentFit="cover"
+                    />
+                    <View style={imgStyles.labelBadge}>
+                      <Text style={imgStyles.labelText}>Front View</Text>
+                    </View>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          )}
+        </Animated.View>
+      )}
+    </View>
+  );
+});
+
+AppointmentCard.displayName = 'AppointmentCard';
 
 export default function BarberDashboardScreen() {
   const router = useRouter();
   const { barberAuth, barberLogout, getBarberAppointments, getBarberNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead } = useBarbers();
   const barber = barberAuth.barber;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const appointments = barber ? getBarberAppointments(barber.id) : [];
   const upcomingAppointments = appointments.filter((a) => a.status !== 'completed');
@@ -209,24 +425,7 @@ export default function BarberDashboardScreen() {
           ) : (
             <View style={styles.appointmentsList}>
               {upcomingAppointments.map((apt) => (
-                <View key={apt.id} style={styles.appointmentCard}>
-                  <View style={styles.appointmentTop}>
-                    <View style={styles.appointmentLeft}>
-                      <View style={styles.clientIconWrap}>
-                        <User color={Colors.accent} size={14} />
-                      </View>
-                      <Text style={styles.appointmentClient}>{apt.customerName}</Text>
-                    </View>
-                    <View style={[styles.statusBadge, apt.status === 'confirmed' ? styles.statusConfirmed : styles.statusPending]}>
-                      <Text style={[styles.statusText, apt.status === 'confirmed' ? styles.statusTextConfirmed : styles.statusTextPending]}>{apt.status}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.appointmentDetails}>
-                    <Text style={styles.appointmentService}>{apt.haircutName}</Text>
-                    <Text style={styles.appointmentTime}>{apt.date} at {apt.time}</Text>
-                    <Text style={styles.appointmentRate}>${apt.rate}</Text>
-                  </View>
-                </View>
+                <AppointmentCard key={apt.id} apt={apt} />
               ))}
             </View>
           )}
@@ -246,6 +445,76 @@ export default function BarberDashboardScreen() {
     </View>
   );
 }
+
+const imgStyles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+  },
+  imageWrap: {
+    width: IMAGE_WIDTH,
+    height: IMAGE_HEIGHT,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.card,
+  },
+  image: {
+    width: IMAGE_WIDTH,
+    height: IMAGE_HEIGHT,
+  },
+  labelBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  labelText: {
+    color: Colors.white,
+    fontSize: 11,
+    fontWeight: '600' as const,
+  },
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: IMAGE_WIDTH,
+    marginTop: 10,
+  },
+  dots: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.borderLight,
+  },
+  dotActive: {
+    backgroundColor: Colors.accent,
+    width: 20,
+    borderRadius: 4,
+  },
+  playBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.accent,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  playText: {
+    color: Colors.black,
+    fontSize: 11,
+    fontWeight: '700' as const,
+  },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
@@ -277,11 +546,13 @@ const styles = StyleSheet.create({
   emptyText: { color: Colors.text, fontSize: 15, fontWeight: '600' as const },
   emptySubtext: { color: Colors.textMuted, fontSize: 12 },
   appointmentsList: { gap: 10 },
-  appointmentCard: { backgroundColor: Colors.surface, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: Colors.border },
+  appointmentCard: { backgroundColor: Colors.surface, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
+  appointmentCardInner: { padding: 14 },
   appointmentTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   appointmentLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   clientIconWrap: { width: 30, height: 30, borderRadius: 15, backgroundColor: Colors.accentMuted, alignItems: 'center', justifyContent: 'center' },
   appointmentClient: { color: Colors.text, fontSize: 14, fontWeight: '600' as const },
+  hasImagesBadge: { width: 22, height: 22, borderRadius: 6, backgroundColor: Colors.tealMuted, alignItems: 'center', justifyContent: 'center' },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   statusConfirmed: { backgroundColor: Colors.successMuted },
   statusPending: { backgroundColor: Colors.accentMuted },
@@ -292,6 +563,13 @@ const styles = StyleSheet.create({
   appointmentService: { color: Colors.textSecondary, fontSize: 13, fontWeight: '500' as const },
   appointmentTime: { color: Colors.textMuted, fontSize: 11, marginTop: 2 },
   appointmentRate: { color: Colors.success, fontSize: 13, fontWeight: '700' as const, marginTop: 4 },
+  expandHint: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.border },
+  expandHintText: { color: Colors.textMuted, fontSize: 11, fontWeight: '500' as const },
+  imageSection: { backgroundColor: Colors.card },
+  imageSectionInner: { paddingHorizontal: 14, paddingVertical: 16 },
+  imageSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
+  imageSectionDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.teal },
+  imageSectionTitle: { fontSize: 10, fontWeight: '700' as const, color: Colors.teal, letterSpacing: 1.2 },
   logoutBtn: { backgroundColor: Colors.errorMuted, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderColor: Colors.errorBorder, marginTop: 8 },
   logoutText: { color: Colors.error, fontSize: 15, fontWeight: '600' as const },
   versionText: { color: Colors.textDim, fontSize: 11, textAlign: 'center', marginTop: 24 },
