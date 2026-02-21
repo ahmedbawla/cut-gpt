@@ -6,7 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SavedLooksProvider } from "@/hooks/useSavedLooks";
 import { FavoritesProvider } from "@/hooks/useFavorites";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { BarbersProvider } from "@/hooks/useBarbers";
+import { BarbersProvider, useBarbers } from "@/hooks/useBarbers";
 import Colors from "@/constants/colors";
 
 SplashScreen.preventAutoHideAsync();
@@ -15,6 +15,7 @@ const queryClient = new QueryClient();
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const { barberAuth } = useBarbers();
   const segments = useSegments();
   const router = useRouter();
 
@@ -22,15 +23,22 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     if (isLoading) return;
 
     const inAuthRoute = segments[0] === ("login" as string) || segments[0] === ("barber-login" as string);
+    const inBarberRoute = segments[0] === ("barber-dashboard" as string);
+    const isBarberAuthed = barberAuth.isAuthenticated;
 
-    if (!isAuthenticated && !inAuthRoute) {
+    if (isBarberAuthed && inBarberRoute) {
+      console.log("[Auth] Barber authenticated, allowing dashboard access");
+      return;
+    }
+
+    if (!isAuthenticated && !isBarberAuthed && !inAuthRoute) {
       console.log("[Auth] Not authenticated, redirecting to login");
       router.replace("/login" as any);
     } else if (isAuthenticated && inAuthRoute) {
       console.log("[Auth] Authenticated, redirecting to home");
       router.replace("/" as any);
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, segments, barberAuth.isAuthenticated]);
 
   return <>{children}</>;
 }
