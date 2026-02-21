@@ -9,14 +9,33 @@ import {
   Animated,
   Modal,
   Dimensions,
+  Platform,
+  Share,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Trash2, ImageOff, Calendar, Images, X, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { Trash2, ImageOff, Calendar, Images, X, ChevronLeft, ChevronRight, ImageDown, Share2 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
+import { File, Paths } from 'expo-file-system';
 import Colors from '@/constants/colors';
 import { useSavedLooks, SavedLook } from '@/hooks/useSavedLooks';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+async function saveBase64ToFile(base64Uri: string, fileName: string): Promise<string | null> {
+  try {
+    if (Platform.OS === 'web') return null;
+    const base64Data = base64Uri.replace(/^data:image\/\w+;base64,/, '');
+    const file = new File(Paths.cache, fileName);
+    const bytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
+    file.write(bytes);
+    return file.uri;
+  } catch (error) {
+    console.error('[Saved] Error saving base64 to file:', error);
+    return null;
+  }
+}
 
 function PhotoGalleryModal({
   visible,
@@ -50,6 +69,73 @@ function PhotoGalleryModal({
     },
     [fadeAnim]
   );
+
+  const handleSaveToDevice = useCallback(async () => {
+    const imageUri = photos[currentIndex];
+    if (!imageUri) return;
+
+    if (Platform.OS === 'web') {
+      try {
+        const link = document.createElement('a');
+        link.href = imageUri;
+        link.download = `haircut-${Date.now()}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        console.error('[Saved] Web download error:', error);
+      }
+      return;
+    }
+
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Photo library access is required to save images.');
+        return;
+      }
+      const fileName = `saved_look_${Date.now()}.jpg`;
+      const filePath = await saveBase64ToFile(imageUri, fileName);
+      if (filePath) {
+        await MediaLibrary.saveToLibraryAsync(filePath);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Saved!', 'Photo saved to your camera roll.');
+      }
+    } catch (error) {
+      console.error('[Saved] Error saving to device:', error);
+      Alert.alert('Error', 'Failed to save image.');
+    }
+  }, [photos, currentIndex]);
+
+  const handleShare = useCallback(async () => {
+    const imageUri = photos[currentIndex];
+    if (!imageUri) return;
+
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      if (Platform.OS === 'web') {
+        if (navigator.share) {
+          await navigator.share({ title, text: 'Check out my new hairstyle!' });
+        }
+        return;
+      }
+
+      const fileName = `share_look_${Date.now()}.jpg`;
+      const filePath = await saveBase64ToFile(imageUri, fileName);
+      if (filePath) {
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(filePath, { mimeType: 'image/jpeg' });
+        } else {
+          await Share.share({ message: 'Check out my new hairstyle!' });
+        }
+      }
+    } catch (error) {
+      console.error('[Saved] Error sharing:', error);
+    }
+  }, [photos, currentIndex, title]);
 
   const labels = ['Front', 'Left', 'Right', 'Back'];
 
@@ -96,6 +182,17 @@ function PhotoGalleryModal({
         <Text style={galleryStyles.label}>
           {labels[currentIndex] ?? `Photo ${currentIndex + 1}`}
         </Text>
+
+        <View style={galleryStyles.actionRow}>
+          <Pressable onPress={handleSaveToDevice} style={galleryStyles.actionBtn}>
+            <ImageDown color={Colors.white} size={18} />
+            <Text style={galleryStyles.actionBtnText}>Save to Device</Text>
+          </Pressable>
+          <Pressable onPress={handleShare} style={[galleryStyles.actionBtn, galleryStyles.shareActionBtn]}>
+            <Share2 color={Colors.white} size={18} />
+            <Text style={galleryStyles.actionBtnText}>Share</Text>
+          </Pressable>
+        </View>
 
         <View style={galleryStyles.dots}>
           {photos.map((_, i) => (
@@ -153,6 +250,76 @@ function SavedLookCard({
       },
     ]);
   }, [look.id, onDelete]);
+
+  const handleSaveToDevice = useCallback(async () => {
+    const imageUri = look.resultPhoto;
+    if (!imageUri) return;
+
+    if (Platform.OS === 'web') {
+      try {
+        const link = document.createElement('a');
+        link.href = imageUri;
+        link.download = `haircut-${look.haircutName}-${Date.now()}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        console.error('[Saved] Web download error:', error);
+      }
+      return;
+    }
+
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Photo library access is required.');
+        return;
+      }
+      const fileName = `saved_${look.haircutName.replace(/\s/g, '_')}_${Date.now()}.jpg`;
+      const filePath = await saveBase64ToFile(imageUri, fileName);
+      if (filePath) {
+        await MediaLibrary.saveToLibraryAsync(filePath);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Saved!', 'Photo saved to your camera roll.');
+      }
+    } catch (error) {
+      console.error('[Saved] Error saving:', error);
+      Alert.alert('Error', 'Failed to save image.');
+    }
+  }, [look]);
+
+  const handleShare = useCallback(async () => {
+    const imageUri = look.resultPhoto;
+    if (!imageUri) return;
+
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      if (Platform.OS === 'web') {
+        if (navigator.share) {
+          await navigator.share({
+            title: look.haircutName,
+            text: `Check out my ${look.haircutName} hairstyle!`,
+          });
+        }
+        return;
+      }
+
+      const fileName = `share_${look.haircutName.replace(/\s/g, '_')}_${Date.now()}.jpg`;
+      const filePath = await saveBase64ToFile(imageUri, fileName);
+      if (filePath) {
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(filePath, { mimeType: 'image/jpeg' });
+        } else {
+          await Share.share({ message: `Check out my ${look.haircutName} hairstyle!` });
+        }
+      }
+    } catch (error) {
+      console.error('[Saved] Error sharing:', error);
+    }
+  }, [look]);
 
   const formattedDate = new Date(look.createdAt).toLocaleDateString('en-US', {
     month: 'short',
@@ -216,14 +383,30 @@ function SavedLookCard({
               )}
             </View>
           </View>
-          <Pressable
-            onPress={handleDelete}
-            style={styles.deleteBtn}
-            hitSlop={12}
-            testID={`delete-look-${look.id}`}
-          >
-            <Trash2 color={Colors.error} size={18} />
-          </Pressable>
+          <View style={styles.cardActions}>
+            <Pressable
+              onPress={handleSaveToDevice}
+              style={styles.cardActionBtn}
+              hitSlop={8}
+            >
+              <ImageDown color={Colors.accent} size={16} />
+            </Pressable>
+            <Pressable
+              onPress={handleShare}
+              style={styles.cardActionBtn}
+              hitSlop={8}
+            >
+              <Share2 color={Colors.success} size={16} />
+            </Pressable>
+            <Pressable
+              onPress={handleDelete}
+              style={styles.deleteBtn}
+              hitSlop={8}
+              testID={`delete-look-${look.id}`}
+            >
+              <Trash2 color={Colors.error} size={16} />
+            </Pressable>
+          </View>
         </View>
       </Pressable>
 
@@ -339,6 +522,28 @@ const galleryStyles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600' as const,
     marginTop: 12,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(200,149,108,0.85)',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 22,
+  },
+  shareActionBtn: {
+    backgroundColor: 'rgba(76,175,125,0.85)',
+  },
+  actionBtnText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: '700' as const,
   },
   dots: {
     flexDirection: 'row',
@@ -462,10 +667,25 @@ const styles = StyleSheet.create({
     fontWeight: '500' as const,
     marginLeft: 6,
   },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  cardActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
   deleteBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(224,85,85,0.1)',
     alignItems: 'center',
     justifyContent: 'center',

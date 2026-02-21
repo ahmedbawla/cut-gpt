@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SavedLooksProvider } from "@/hooks/useSavedLooks";
+import { FavoritesProvider } from "@/hooks/useFavorites";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Colors from "@/constants/colors";
 
@@ -73,9 +74,11 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView>
         <AuthProvider>
-          <SavedLooksProvider>
-            <RootLayoutNav />
-          </SavedLooksProvider>
+          <FavoritesProvider>
+            <SavedLooksProvider>
+              <RootLayoutNav />
+            </SavedLooksProvider>
+          </FavoritesProvider>
         </AuthProvider>
       </GestureHandlerRootView>
     </QueryClientProvider>

@@ -7,8 +7,11 @@ import {
   Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { Heart } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { HaircutStyle } from '@/constants/haircuts';
+import { useFavorites } from '@/hooks/useFavorites';
 
 interface HaircutCardProps {
   haircut: HaircutStyle;
@@ -18,6 +21,10 @@ interface HaircutCardProps {
 
 const HaircutCard = React.memo(({ haircut, onPress, index }: HaircutCardProps) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const heartAnim = useRef(new Animated.Value(1)).current;
+  const { isFavorite, toggleFavorite } = useFavorites();
+
+  const liked = isFavorite(haircut.id);
 
   const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {
@@ -40,6 +47,25 @@ const HaircutCard = React.memo(({ haircut, onPress, index }: HaircutCardProps) =
   const handlePress = useCallback(() => {
     onPress(haircut);
   }, [onPress, haircut]);
+
+  const handleFavorite = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    toggleFavorite(haircut.id);
+    Animated.sequence([
+      Animated.spring(heartAnim, {
+        toValue: 1.4,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 12,
+      }),
+      Animated.spring(heartAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 8,
+      }),
+    ]).start();
+  }, [haircut.id, toggleFavorite, heartAnim]);
 
   const isLeftColumn = index % 2 === 0;
 
@@ -65,6 +91,20 @@ const HaircutCard = React.memo(({ haircut, onPress, index }: HaircutCardProps) =
           transition={300}
         />
         <View style={styles.overlay} />
+        <Pressable
+          onPress={handleFavorite}
+          style={styles.favoriteBtn}
+          hitSlop={10}
+          testID={`favorite-${haircut.id}`}
+        >
+          <Animated.View style={{ transform: [{ scale: heartAnim }] }}>
+            <Heart
+              color={liked ? '#E05555' : Colors.white}
+              size={18}
+              fill={liked ? '#E05555' : 'transparent'}
+            />
+          </Animated.View>
+        </Pressable>
         <View style={styles.info}>
           <Text style={styles.category}>{haircut.category.toUpperCase()}</Text>
           <Text style={styles.name}>{haircut.name}</Text>
@@ -102,6 +142,18 @@ const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  favoriteBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
   },
   info: {
     position: 'absolute',

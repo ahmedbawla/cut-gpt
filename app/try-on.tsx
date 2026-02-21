@@ -11,11 +11,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Share,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
+import * as Sharing from 'expo-sharing';
+import * as MediaLibrary from 'expo-media-library';
+import { File, Paths } from 'expo-file-system';
 import {
   Camera,
   ImagePlus,
@@ -29,6 +33,8 @@ import {
   MessageCircle,
   Download,
   RefreshCw,
+  Share2,
+  ImageDown,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { HAIRCUTS } from '@/constants/haircuts';
@@ -78,6 +84,21 @@ const ANGLE_CONFIGS = [
   },
 ];
 
+async function saveBase64ToFile(base64Uri: string, fileName: string): Promise<string | null> {
+  try {
+    if (Platform.OS === 'web') return null;
+
+    const base64Data = base64Uri.replace(/^data:image\/\w+;base64,/, '');
+    const file = new File(Paths.cache, fileName);
+    const bytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
+    file.write(bytes);
+    return file.uri;
+  } catch (error) {
+    console.error('[TryOn] Error saving base64 to file:', error);
+    return null;
+  }
+}
+
 export default function TryOnScreen() {
   const { haircutId } = useLocalSearchParams<{ haircutId: string }>();
   const router = useRouter();
@@ -95,6 +116,7 @@ export default function TryOnScreen() {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [generatedCount, setGeneratedCount] = useState(0);
   const [currentPrompt, setCurrentPrompt] = useState('');
+  const [isSavingToDevice, setIsSavingToDevice] = useState(false);
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -214,7 +236,7 @@ export default function TryOnScreen() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prompt: `This is a photo of a person. ${haircutPrompt}. ${angleConfig.promptSuffix} Make it look natural and photorealistic.`,
+            prompt: `This is a photo of a person. The photo is NOT mirrored - it shows the person as they naturally appear. ${haircutPrompt}. ${angleConfig.promptSuffix} Make it look natural and photorealistic.`,
             images: [{ type: 'image', image: base64 }],
             aspectRatio: '3:4',
           }),
@@ -357,6 +379,135 @@ export default function TryOnScreen() {
 
     Alert.alert('Saved!', `${angleViews[index].shortLabel} view saved to My Looks.`);
   }, [angleViews, haircut, userPhoto, saveLook]);
+
+  const handleSaveToDevice = useCallback(async (imageUri: string, label: string) => {
+    if (Platform.OS === 'web') {
+      try {
+        const link = document.createElement('a');
+        link.href = imageUri;
+        link.download = `haircut-${label.toLowerCase().replace(/\s/g, '-')}-${Date.now()}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        Alert.alert('Downloaded!', 'Image has been downloaded.');
+      } catch (error) {
+        console.error('[TryOn] Web download error:', error);
+        Alert.alert('Error', 'Could not download the image.');
+      }
+      return;
+    }
+
+    try {
+      setIsSavingToDevice(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Photo library access is required to save images.');
+        return;
+      }
+
+      const fileName = `haircut_${label.toLowerCase().replace(/\s/g, '_')}_${Date.now()}.jpg`;
+      const filePath = await saveBase64ToFile(imageUri, fileName);
+
+      if (!filePath) {
+        Alert.alert('Error', 'Could not save the image to your device.');
+        return;
+      }
+
+      await MediaLibrary.saveToLibraryAsync(filePath);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Saved to Photos!', `${label} has been saved to your camera roll.`);
+    } catch (error) {
+      console.error('[TryOn] Error saving to device:', error);
+      Alert.alert('Error', 'Failed to save image to your device.');
+    } finally {
+      setIsSavingToDevice(false);
+    }
+  }, []);
+
+  const handleSaveAllToDevice = useCallback(async () => {
+    if (angleViews.length === 0) return;
+
+    if (Platform.OS === 'web') {
+      for (const view of angleViews) {
+        await handleSaveToDevice(view.image, view.shortLabel);
+      }
+      return;
+    }
+
+    try {
+      setIsSavingToDevice(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Photo library access is required to save images.');
+        return;
+      }
+
+      let savedCount = 0;
+      for (let i = 0; i < angleViews.length; i++) {
+        const view = angleViews[i];
+        const fileName = `haircut_${view.shortLabel.toLowerCase()}_${Date.now()}_${i}.jpg`;
+        const filePath = await saveBase64ToFile(view.image, fileName);
+        if (filePath) {
+          await MediaLibrary.saveToLibraryAsync(filePath);
+          savedCount++;
+        }
+      }
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Saved to Photos!', `${savedCount} photos saved to your camera roll.`);
+    } catch (error) {
+      console.error('[TryOn] Error saving all to device:', error);
+      Alert.alert('Error', 'Failed to save some images to your device.');
+    } finally {
+      setIsSavingToDevice(false);
+    }
+  }, [angleViews, handleSaveToDevice]);
+
+  const handleShareImage = useCallback(async (imageUri: string, label: string) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      if (Platform.OS === 'web') {
+        if (navigator.share) {
+          await navigator.share({
+            title: `My ${haircut?.name ?? 'Haircut'} - ${label}`,
+            text: `Check out this ${label} view of my new hairstyle!`,
+          });
+        } else {
+          Alert.alert('Sharing not available', 'Your browser does not support sharing.');
+        }
+        return;
+      }
+
+      const fileName = `share_haircut_${label.toLowerCase().replace(/\s/g, '_')}_${Date.now()}.jpg`;
+      const filePath = await saveBase64ToFile(imageUri, fileName);
+
+      if (!filePath) {
+        await Share.share({
+          message: `Check out my new ${haircut?.name ?? 'hairstyle'} - ${label} view!`,
+        });
+        return;
+      }
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(filePath, {
+          mimeType: 'image/jpeg',
+          dialogTitle: `Share ${label}`,
+        });
+      } else {
+        await Share.share({
+          message: `Check out my new ${haircut?.name ?? 'hairstyle'} - ${label} view!`,
+        });
+      }
+    } catch (error) {
+      console.error('[TryOn] Error sharing:', error);
+    }
+  }, [haircut]);
 
   const handleSendEdit = useCallback(async () => {
     if (!chatInput.trim() || isRegenerating || !haircut || !userPhotoBase64) return;
@@ -680,15 +831,27 @@ export default function TryOnScreen() {
                   contentFit="cover"
                   transition={300}
                 />
-                <Pressable
-                  onPress={() => handleSaveAnglePhoto(0)}
-                  style={styles.frontSaveBtn}
-                  hitSlop={8}
-                  testID="save-front-btn"
-                >
-                  <Download color={Colors.white} size={16} />
-                  <Text style={styles.frontSaveBtnText}>Save</Text>
-                </Pressable>
+                <View style={styles.frontPhotoActions}>
+                  <Pressable
+                    onPress={() => handleSaveToDevice(angleViews[0].image, 'Front View')}
+                    style={styles.frontActionBtn}
+                    hitSlop={8}
+                    disabled={isSavingToDevice}
+                    testID="save-front-device-btn"
+                  >
+                    <ImageDown color={Colors.white} size={15} />
+                    <Text style={styles.frontActionBtnText}>Save</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleShareImage(angleViews[0].image, 'Front View')}
+                    style={[styles.frontActionBtn, styles.shareBtn]}
+                    hitSlop={8}
+                    testID="share-front-btn"
+                  >
+                    <Share2 color={Colors.white} size={15} />
+                    <Text style={styles.frontActionBtnText}>Share</Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
 
@@ -714,8 +877,25 @@ export default function TryOnScreen() {
                 testID="save-all-btn"
               >
                 <Save color={Colors.white} size={20} />
-                <Text style={styles.saveAllBtnText}>Save All Photos</Text>
+                <Text style={styles.saveAllBtnText}>Save to My Looks</Text>
               </Pressable>
+
+              <Pressable
+                onPress={handleSaveAllToDevice}
+                style={styles.saveDeviceBtn}
+                disabled={isSavingToDevice}
+                testID="save-all-device-btn"
+              >
+                {isSavingToDevice ? (
+                  <ActivityIndicator size="small" color={Colors.accent} />
+                ) : (
+                  <ImageDown color={Colors.accent} size={20} />
+                )}
+                <Text style={styles.saveDeviceBtnText}>
+                  {isSavingToDevice ? 'Saving...' : 'Save All to Device'}
+                </Text>
+              </Pressable>
+
               <Pressable
                 onPress={handleReset}
                 style={styles.retryBtn}
@@ -1101,21 +1281,28 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 420,
   },
-  frontSaveBtn: {
+  frontPhotoActions: {
     position: 'absolute',
     bottom: 14,
     right: 14,
     flexDirection: 'row',
+    gap: 8,
+  },
+  frontActionBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     backgroundColor: 'rgba(200,149,108,0.85)',
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
   },
-  frontSaveBtnText: {
+  shareBtn: {
+    backgroundColor: 'rgba(76,175,125,0.85)',
+  },
+  frontActionBtnText: {
     color: Colors.white,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700' as const,
   },
   divider: {
@@ -1142,6 +1329,22 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 17,
     fontWeight: '700' as const,
+  },
+  saveDeviceBtn: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 14,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+  },
+  saveDeviceBtnText: {
+    color: Colors.accent,
+    fontSize: 17,
+    fontWeight: '600' as const,
   },
   retryBtn: {
     backgroundColor: Colors.cardBackground,
