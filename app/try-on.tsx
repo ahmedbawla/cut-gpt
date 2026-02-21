@@ -35,6 +35,7 @@ import {
   RefreshCw,
   Share2,
   ImageDown,
+  Navigation,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { HAIRCUTS } from '@/constants/haircuts';
@@ -908,6 +909,23 @@ export default function TryOnScreen() {
 
             <View style={styles.divider} />
 
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push({
+                  pathname: '/find-barber' as any,
+                  params: { haircutName: haircut.name },
+                });
+              }}
+              style={styles.findBarberBtn}
+              testID="find-barber-btn"
+            >
+              <Navigation color={Colors.white} size={20} />
+              <Text style={styles.findBarberBtnText}>Find a Barber Near You</Text>
+            </Pressable>
+
+            <View style={styles.divider} />
+
             <View style={styles.chatSection}>
               <View style={styles.chatHeader}>
                 <MessageCircle color={Colors.accent} size={18} />
@@ -1004,7 +1022,7 @@ const styles = StyleSheet.create({
     margin: 16,
     borderRadius: 20,
     overflow: 'hidden',
-    height: 200,
+    height: 280,
   },
   haircutImage: {
     width: '100%',
@@ -1452,5 +1470,19 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: {
     opacity: 0.4,
+  },
+  findBarberBtn: {
+    backgroundColor: '#4ECDC4',
+    borderRadius: 14,
+    paddingVertical: 16,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 10,
+  },
+  findBarberBtnText: {
+    color: Colors.white,
+    fontSize: 17,
+    fontWeight: '700' as const,
   },
 });

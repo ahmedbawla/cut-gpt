@@ -12,7 +12,8 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { Scissors, Eye, EyeOff, ArrowRight, UserPlus } from 'lucide-react-native';
+import { Scissors, Eye, EyeOff, ArrowRight, UserPlus, Briefcase } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +21,7 @@ import { useAuth } from '@/hooks/useAuth';
 type AuthMode = 'login' | 'signup';
 
 export default function LoginScreen() {
+  const router = useRouter();
   const { login, signup, isLoggingIn, isSigningUp } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>('login');
@@ -132,7 +134,7 @@ export default function LoginScreen() {
             <View style={styles.logoCircle}>
               <Scissors color={Colors.accent} size={36} />
             </View>
-            <Text style={styles.appName}>StyleCut</Text>
+            <Text style={styles.appName}>Cut-GPT</Text>
             <Text style={styles.appTagline}>AI-Powered Haircut Try-On</Text>
           </Animated.View>
 
@@ -275,6 +277,24 @@ export default function LoginScreen() {
                 </Text>
               </Text>
             </Pressable>
+
+            <View style={styles.barberDivider}>
+              <View style={styles.barberDividerLine} />
+              <Text style={styles.barberDividerText}>OR</Text>
+              <View style={styles.barberDividerLine} />
+            </View>
+
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push('/barber-login' as any);
+              }}
+              style={styles.barberLoginBtn}
+              testID="barber-login-btn"
+            >
+              <Briefcase color="#4ECDC4" size={20} />
+              <Text style={styles.barberLoginText}>Sign in as a Barber</Text>
+            </Pressable>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -415,5 +435,38 @@ const styles = StyleSheet.create({
   switchTextAccent: {
     color: Colors.accent,
     fontWeight: '700' as const,
+  },
+  barberDivider: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    marginTop: 20,
+    marginBottom: 16,
+    gap: 12,
+  },
+  barberDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  barberDividerText: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600' as const,
+  },
+  barberLoginBtn: {
+    backgroundColor: 'rgba(78,205,196,0.08)',
+    borderRadius: 14,
+    paddingVertical: 16,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(78,205,196,0.25)',
+  },
+  barberLoginText: {
+    color: '#4ECDC4',
+    fontSize: 16,
+    fontWeight: '600' as const,
   },
 });

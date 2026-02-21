@@ -257,7 +257,7 @@ export default function ProfileScreen() {
         </Pressable>
       </Animated.View>
 
-      <Text style={styles.versionText}>StyleCut v1.0.0</Text>
+      <Text style={styles.versionText}>Cut-GPT v1.0.0</Text>
     </ScrollView>
   );
 }

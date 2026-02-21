@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SavedLooksProvider } from "@/hooks/useSavedLooks";
 import { FavoritesProvider } from "@/hooks/useFavorites";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { BarbersProvider } from "@/hooks/useBarbers";
 import Colors from "@/constants/colors";
 
 SplashScreen.preventAutoHideAsync();
@@ -20,7 +21,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthRoute = segments[0] === ("login" as string);
+    const inAuthRoute = segments[0] === ("login" as string) || segments[0] === ("barber-login" as string);
 
     if (!isAuthenticated && !inAuthRoute) {
       console.log("[Auth] Not authenticated, redirecting to login");
@@ -53,11 +54,39 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
+          name="barber-login"
+          options={{
+            headerShown: false,
+            presentation: "modal",
+          }}
+        />
+        <Stack.Screen
+          name="barber-dashboard"
+          options={{
+            headerShown: true,
+            title: "Barber Dashboard",
+          }}
+        />
+        <Stack.Screen
           name="try-on"
           options={{
             presentation: "modal",
             headerShown: true,
             title: "Try On",
+          }}
+        />
+        <Stack.Screen
+          name="find-barber"
+          options={{
+            headerShown: true,
+            title: "Find a Barber",
+          }}
+        />
+        <Stack.Screen
+          name="book-appointment"
+          options={{
+            headerShown: true,
+            title: "Book Appointment",
           }}
         />
       </Stack>
@@ -74,11 +103,13 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView>
         <AuthProvider>
-          <FavoritesProvider>
-            <SavedLooksProvider>
-              <RootLayoutNav />
-            </SavedLooksProvider>
-          </FavoritesProvider>
+          <BarbersProvider>
+            <FavoritesProvider>
+              <SavedLooksProvider>
+                <RootLayoutNav />
+              </SavedLooksProvider>
+            </FavoritesProvider>
+          </BarbersProvider>
         </AuthProvider>
       </GestureHandlerRootView>
     </QueryClientProvider>
