@@ -9,6 +9,7 @@ import {
   Alert,
   Animated,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -43,6 +44,16 @@ export default function ProfileScreen() {
   const handlePickAvatar = useCallback(async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      console.log('[Profile] Opening image picker...');
+
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission needed', 'Please grant photo library access to change your profile picture.');
+          return;
+        }
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
@@ -50,11 +61,16 @@ export default function ProfileScreen() {
         quality: 0.7,
       });
 
-      if (!result.canceled && result.assets[0]) {
+      console.log('[Profile] Picker result:', JSON.stringify({ canceled: result.canceled, assetCount: result.assets?.length }));
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const uri = result.assets[0].uri;
+        console.log('[Profile] Selected avatar URI:', uri);
         setIsUpdating(true);
         try {
-          await updateProfile({ avatarUrl: result.assets[0].uri });
+          await updateProfile({ avatarUrl: uri });
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          console.log('[Profile] Avatar updated successfully');
         } catch (err) {
           console.error('[Profile] Avatar update error:', err);
           Alert.alert('Error', 'Failed to update avatar.');
@@ -64,6 +80,7 @@ export default function ProfileScreen() {
       }
     } catch (err) {
       console.error('[Profile] Pick avatar error:', err);
+      Alert.alert('Error', 'Could not open image picker.');
     }
   }, [updateProfile]);
 
