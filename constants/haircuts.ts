@@ -9,6 +9,7 @@ export interface HaircutStyle {
 
 export const HAIRCUT_CATEGORIES = [
   'All',
+  'Custom',
   'Classic',
   'Modern',
   'Fade',
@@ -20,7 +21,17 @@ export const HAIRCUT_CATEGORIES = [
 
 export type HaircutCategory = (typeof HAIRCUT_CATEGORIES)[number];
 
+export const CUSTOM_HAIRCUT: HaircutStyle = {
+  id: 'custom',
+  name: 'Custom',
+  description: 'Describe your dream haircut and AI will create it',
+  category: 'Custom',
+  image: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&h=500&fit=crop',
+  prompt: '',
+};
+
 export const HAIRCUTS: HaircutStyle[] = [
+  CUSTOM_HAIRCUT,
   {
     id: 'buzz-cut',
     name: 'Buzz Cut',

@@ -37,11 +37,11 @@ import {
   Navigation,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
-import { HAIRCUTS } from '@/constants/haircuts';
+import { HAIRCUTS, CUSTOM_HAIRCUT } from '@/constants/haircuts';
 import { useSavedLooks } from '@/hooks/useSavedLooks';
 import MultiAngleViewer from '@/components/MultiAngleViewer';
 
-type TryOnStep = 'select-photo' | 'processing' | 'result';
+type TryOnStep = 'describe-custom' | 'select-photo' | 'processing' | 'result';
 
 interface AngleView {
   label: string;
@@ -106,8 +106,9 @@ export default function TryOnScreen() {
   const scrollRef = useRef<ScrollView>(null);
 
   const haircut = HAIRCUTS.find((h) => h.id === haircutId);
+  const isCustom = haircutId === 'custom';
 
-  const [step, setStep] = useState<TryOnStep>('select-photo');
+  const [step, setStep] = useState<TryOnStep>(haircutId === 'custom' ? 'describe-custom' : 'select-photo');
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userPhotoBase64, setUserPhotoBase64] = useState<string | null>(null);
   const [angleViews, setAngleViews] = useState<AngleView[]>([]);
@@ -121,6 +122,16 @@ export default function TryOnScreen() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isRegenerating, setIsRegenerating] = useState(false);
+
+  const [customDescription, setCustomDescription] = useState('');
+  const [customChatMessages, setCustomChatMessages] = useState<ChatMessage[]>([
+    {
+      id: 'custom-welcome',
+      role: 'assistant',
+      text: "Hey! I'm your AI barber. Describe your dream haircut in detail and I'll create it for you.\n\nBe as specific as you like:\n\n\u2022 \"High skin fade with a textured crop on top\"\n\u2022 \"Long flowing curtains with layers\"\n\u2022 \"Buzz cut with a lightning bolt design\"\n\u2022 \"Afro with a taper fade\"\n\nWhat are you thinking?",
+    },
+  ]);
+  const [customInput, setCustomInput] = useState('');
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -259,13 +270,46 @@ export default function TryOnScreen() {
     []
   );
 
+  const handleCustomSubmit = useCallback(() => {
+    if (!customInput.trim()) return;
+
+    const userMessage = customInput.trim();
+    setCustomInput('');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    const userMsg: ChatMessage = {
+      id: `custom-user-${Date.now()}`,
+      role: 'user',
+      text: userMessage,
+    };
+
+    const confirmMsg: ChatMessage = {
+      id: `custom-confirm-${Date.now()}`,
+      role: 'assistant',
+      text: `Great choice! I'll create: "${userMessage}"\n\nNow let's take a photo or choose one from your gallery so I can apply this style to you.`,
+    };
+
+    setCustomChatMessages((prev) => [...prev, userMsg, confirmMsg]);
+    setCustomDescription(userMessage);
+  }, [customInput]);
+
+  const handleProceedToPhoto = useCallback(() => {
+    if (!customDescription.trim()) {
+      Alert.alert('Describe your cut', 'Please describe your ideal haircut first.');
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setCurrentPrompt(`Apply this hairstyle: ${customDescription}. Make it look natural and photorealistic on the person.`);
+    setStep('select-photo');
+  }, [customDescription]);
+
   const processImage = useCallback(async (prompt?: string) => {
     if (!userPhotoBase64 || !haircut) {
       Alert.alert('Error', 'Please select a photo first.');
       return;
     }
 
-    const haircutPrompt = prompt || haircut.prompt;
+    const haircutPrompt = prompt || (isCustom ? currentPrompt : haircut.prompt);
     setCurrentPrompt(haircutPrompt);
 
     setStep('processing');
@@ -341,7 +385,7 @@ export default function TryOnScreen() {
       clearInterval(msgInterval);
       setIsProcessing(false);
     }
-  }, [userPhotoBase64, haircut, generateAngle, chatMessages.length]);
+  }, [userPhotoBase64, haircut, generateAngle, chatMessages.length, isCustom, currentPrompt]);
 
   const handleSaveAll = useCallback(() => {
     if (angleViews.length === 0 || !haircut || !userPhoto) return;
@@ -601,10 +645,19 @@ export default function TryOnScreen() {
     setChatMessages([]);
     setChatInput('');
     setCurrentPrompt('');
-    setStep('select-photo');
+    setCustomDescription('');
+    setCustomInput('');
+    setCustomChatMessages([
+      {
+        id: 'custom-welcome',
+        role: 'assistant',
+        text: "Hey! I'm your AI barber. Describe your dream haircut in detail and I'll create it for you.\n\nBe as specific as you like:\n\n\u2022 \"High skin fade with a textured crop on top\"\n\u2022 \"Long flowing curtains with layers\"\n\u2022 \"Buzz cut with a lightning bolt design\"\n\u2022 \"Afro with a taper fade\"\n\nWhat are you thinking?",
+      },
+    ]);
+    setStep(isCustom ? 'describe-custom' : 'select-photo');
     fadeAnim.setValue(0);
     slideAnim.setValue(30);
-  }, [fadeAnim, slideAnim]);
+  }, [fadeAnim, slideAnim, isCustom]);
 
   if (!haircut) {
     return (
@@ -627,7 +680,7 @@ export default function TryOnScreen() {
     >
       <Stack.Screen
         options={{
-          title: haircut.name,
+          title: isCustom ? 'Custom Style' : haircut.name,
           headerStyle: { backgroundColor: Colors.background },
           headerTintColor: Colors.text,
           headerTitleStyle: { fontWeight: '700' as const },
@@ -648,6 +701,85 @@ export default function TryOnScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {step === 'describe-custom' && (
+          <Animated.View
+            style={[
+              styles.stepContainer,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+            ]}
+          >
+            <View style={styles.customHeroSection}>
+              <View style={styles.customIconCircle}>
+                <Sparkles color={Colors.black} size={28} />
+              </View>
+              <Text style={styles.customHeroTitle}>Design Your Cut</Text>
+              <Text style={styles.customHeroSubtitle}>
+                Tell me exactly what you want and I'll make it happen
+              </Text>
+            </View>
+
+            <View style={styles.customChatSection}>
+              <View style={styles.customChatMessages}>
+                {customChatMessages.map((msg) => (
+                  <View
+                    key={msg.id}
+                    style={[
+                      styles.chatBubble,
+                      msg.role === 'user' ? styles.chatBubbleUser : styles.chatBubbleAssistant,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.chatBubbleText,
+                        msg.role === 'user' && styles.chatBubbleTextUser,
+                      ]}
+                    >
+                      {msg.text}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              {!customDescription ? (
+                <View style={styles.chatInputRow}>
+                  <TextInput
+                    style={styles.chatInput}
+                    value={customInput}
+                    onChangeText={setCustomInput}
+                    placeholder="Describe your ideal haircut..."
+                    placeholderTextColor={Colors.textMuted}
+                    multiline
+                    testID="custom-chat-input"
+                  />
+                  <Pressable
+                    onPress={handleCustomSubmit}
+                    style={[
+                      styles.sendBtn,
+                      !customInput.trim() && styles.sendBtnDisabled,
+                    ]}
+                    disabled={!customInput.trim()}
+                    testID="custom-send-btn"
+                  >
+                    <Send color={Colors.black} size={16} />
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable
+                  onPress={handleProceedToPhoto}
+                  style={({ pressed }) => [
+                    styles.generateBtn,
+                    pressed && styles.generateBtnPressed,
+                  ]}
+                  testID="proceed-to-photo-btn"
+                >
+                  <Camera color={Colors.black} size={18} />
+                  <Text style={styles.generateBtnText}>Continue to Photo</Text>
+                </Pressable>
+              )}
+            </View>
+          </Animated.View>
+        )}
+
         {step === 'select-photo' && (
           <Animated.View
             style={[
@@ -655,25 +787,39 @@ export default function TryOnScreen() {
               { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
             ]}
           >
-            <View style={styles.haircutPreview}>
-              <Image
-                source={{ uri: haircut.image }}
-                style={styles.haircutImage}
-                contentFit="cover"
-                transition={300}
-              />
-              <View style={styles.haircutPreviewOverlay}>
-                <View style={styles.previewCategoryBadge}>
-                  <Text style={styles.haircutPreviewCategory}>
-                    {haircut.category}
+            {isCustom && customDescription ? (
+              <View style={styles.customPreviewBanner}>
+                <View style={styles.customPreviewIcon}>
+                  <Sparkles color={Colors.black} size={18} />
+                </View>
+                <View style={styles.customPreviewContent}>
+                  <Text style={styles.customPreviewLabel}>CUSTOM STYLE</Text>
+                  <Text style={styles.customPreviewText} numberOfLines={2}>
+                    {customDescription}
                   </Text>
                 </View>
-                <Text style={styles.haircutPreviewName}>{haircut.name}</Text>
-                <Text style={styles.haircutPreviewDesc}>
-                  {haircut.description}
-                </Text>
               </View>
-            </View>
+            ) : !isCustom ? (
+              <View style={styles.haircutPreview}>
+                <Image
+                  source={{ uri: haircut.image }}
+                  style={styles.haircutImage}
+                  contentFit="cover"
+                  transition={300}
+                />
+                <View style={styles.haircutPreviewOverlay}>
+                  <View style={styles.previewCategoryBadge}>
+                    <Text style={styles.haircutPreviewCategory}>
+                      {haircut.category}
+                    </Text>
+                  </View>
+                  <Text style={styles.haircutPreviewName}>{haircut.name}</Text>
+                  <Text style={styles.haircutPreviewDesc}>
+                    {haircut.description}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
 
             <View style={styles.featureBadge}>
               <Eye color={Colors.accent} size={13} />
@@ -828,7 +974,7 @@ export default function TryOnScreen() {
           >
             <Text style={styles.resultTitle}>Your New Look</Text>
             <Text style={styles.resultSubtitle}>
-              {haircut.name} · {angleViews.length} angles
+              {isCustom ? 'Custom Style' : haircut.name} · {angleViews.length} angles
             </Text>
 
             <View style={styles.frontPhotoSection}>
@@ -1540,5 +1686,80 @@ const styles = StyleSheet.create({
     color: Colors.black,
     fontSize: 16,
     fontWeight: '700' as const,
+  },
+  customHeroSection: {
+    alignItems: 'center',
+    paddingTop: 20,
+    paddingBottom: 24,
+    paddingHorizontal: 32,
+  },
+  customIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  customHeroTitle: {
+    color: Colors.text,
+    fontSize: 24,
+    fontWeight: '800' as const,
+    marginBottom: 6,
+    letterSpacing: -0.3,
+  },
+  customHeroSubtitle: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  customChatSection: {
+    marginHorizontal: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  customChatMessages: {
+    gap: 8,
+    marginBottom: 14,
+  },
+  customPreviewBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.accentBorder,
+  },
+  customPreviewIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customPreviewContent: {
+    flex: 1,
+  },
+  customPreviewLabel: {
+    color: Colors.accent,
+    fontSize: 9,
+    fontWeight: '700' as const,
+    letterSpacing: 1.5,
+    marginBottom: 3,
+  },
+  customPreviewText: {
+    color: Colors.text,
+    fontSize: 14,
+    fontWeight: '600' as const,
+    lineHeight: 19,
   },
 });

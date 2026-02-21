@@ -10,11 +10,11 @@ import {
   Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Search, X, Heart, Sparkles } from 'lucide-react-native';
+import { Search, X, Heart, Sparkles, Wand2 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
-import { HAIRCUTS, HAIRCUT_CATEGORIES, HaircutStyle, HaircutCategory } from '@/constants/haircuts';
+import { HAIRCUTS, HAIRCUT_CATEGORIES, HaircutStyle, HaircutCategory, CUSTOM_HAIRCUT } from '@/constants/haircuts';
 import HaircutCard from '@/components/HaircutCard';
 import { useFavorites } from '@/hooks/useFavorites';
 
@@ -30,10 +30,12 @@ export default function HomeScreen() {
   const { favoriteIds } = useFavorites();
 
   const filteredHaircuts = useMemo(() => {
-    let results = HAIRCUTS;
+    let results = HAIRCUTS.filter((h) => h.id !== 'custom');
 
     if (selectedCategory === 'Favorites') {
       results = results.filter((h) => favoriteIds.includes(h.id));
+    } else if (selectedCategory === 'Custom') {
+      return [];
     } else if (selectedCategory !== 'All') {
       results = results.filter((h) => h.category === selectedCategory);
     }
@@ -50,6 +52,10 @@ export default function HomeScreen() {
 
     return results;
   }, [selectedCategory, searchQuery, favoriteIds]);
+
+  const showCustomBanner = useMemo(() => {
+    return selectedCategory === 'All' || selectedCategory === 'Custom';
+  }, [selectedCategory]);
 
   const handleCategoryPress = useCallback((category: FilterMode) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -170,16 +176,40 @@ export default function HomeScreen() {
           })}
         </ScrollView>
 
-        <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>
-            {selectedCategory === 'All'
-              ? 'All Styles'
-              : selectedCategory === 'Favorites'
-              ? 'Favorites'
-              : selectedCategory}
-          </Text>
-          <Text style={styles.countText}>{filteredHaircuts.length}</Text>
-        </View>
+        {showCustomBanner && (
+          <Pressable
+            onPress={() => handleHaircutPress(CUSTOM_HAIRCUT)}
+            style={({ pressed }) => [
+              styles.customBanner,
+              pressed && styles.customBannerPressed,
+            ]}
+            testID="custom-haircut-banner"
+          >
+            <View style={styles.customBannerIconWrap}>
+              <Wand2 color={Colors.black} size={22} />
+            </View>
+            <View style={styles.customBannerContent}>
+              <Text style={styles.customBannerTitle}>Create Custom Style</Text>
+              <Text style={styles.customBannerDesc}>
+                Describe your dream haircut and let AI bring it to life
+              </Text>
+            </View>
+            <Sparkles color={Colors.accent} size={16} />
+          </Pressable>
+        )}
+
+        {selectedCategory !== 'Custom' && (
+          <View style={styles.sectionRow}>
+            <Text style={styles.sectionTitle}>
+              {selectedCategory === 'All'
+                ? 'All Styles'
+                : selectedCategory === 'Favorites'
+                ? 'Favorites'
+                : selectedCategory}
+            </Text>
+            <Text style={styles.countText}>{filteredHaircuts.length}</Text>
+          </View>
+        )}
       </View>
     ),
     [selectedCategory, filteredHaircuts.length, handleCategoryPress, searchQuery, searchFocused, handleSearchFocus, handleSearchBlur, clearSearch, favoriteIds.length, allFilters, insets.top]
@@ -367,5 +397,41 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  customBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.accentBorder,
+    gap: 14,
+  },
+  customBannerPressed: {
+    backgroundColor: Colors.card,
+  },
+  customBannerIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customBannerContent: {
+    flex: 1,
+  },
+  customBannerTitle: {
+    color: Colors.text,
+    fontSize: 15,
+    fontWeight: '700' as const,
+    marginBottom: 2,
+  },
+  customBannerDesc: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
   },
 });
