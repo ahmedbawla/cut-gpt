@@ -19,6 +19,8 @@ import {
   Clock,
   User,
   ChevronLeft,
+  Bell,
+  CheckCheck,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -26,12 +28,14 @@ import { useBarbers } from '@/hooks/useBarbers';
 
 export default function BarberDashboardScreen() {
   const router = useRouter();
-  const { barberAuth, barberLogout, getBarberAppointments } = useBarbers();
+  const { barberAuth, barberLogout, getBarberAppointments, getBarberNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead } = useBarbers();
   const barber = barberAuth.barber;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const appointments = barber ? getBarberAppointments(barber.id) : [];
   const upcomingAppointments = appointments.filter((a) => a.status !== 'completed');
+  const barberNotifications = barber ? getBarberNotifications(barber.id) : [];
+  const unreadCount = barber ? getUnreadCount(barber.id) : 0;
 
   const handleLogout = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -111,6 +115,13 @@ export default function BarberDashboardScreen() {
             <Text style={styles.statNumber}>{upcomingAppointments.length}</Text>
             <Text style={styles.statLabel}>Bookings</Text>
           </View>
+          <View style={styles.statCard}>
+            <View style={[styles.statIconWrap, { backgroundColor: unreadCount > 0 ? 'rgba(232,80,80,0.12)' : Colors.accentMuted }]}>
+              <Bell color={unreadCount > 0 ? Colors.error : Colors.accent} size={16} />
+            </View>
+            <Text style={styles.statNumber}>{unreadCount}</Text>
+            <Text style={styles.statLabel}>New</Text>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -133,6 +144,59 @@ export default function BarberDashboardScreen() {
             ))}
           </View>
         </View>
+
+        {barberNotifications.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>NOTIFICATIONS</Text>
+              {unreadCount > 0 && (
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    markAllNotificationsRead(barber.id);
+                  }}
+                  hitSlop={8}
+                  style={styles.markAllBtn}
+                  testID="mark-all-read"
+                >
+                  <CheckCheck color={Colors.teal} size={13} />
+                  <Text style={styles.markAllText}>Mark all read</Text>
+                </Pressable>
+              )}
+            </View>
+            <View style={styles.notificationsList}>
+              {barberNotifications.slice(0, 10).map((notif) => (
+                <Pressable
+                  key={notif.id}
+                  onPress={() => {
+                    if (!notif.read) {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      markNotificationRead(notif.id);
+                    }
+                  }}
+                  style={[styles.notificationCard, !notif.read && styles.notificationCardUnread]}
+                  testID={`notif-${notif.id}`}
+                >
+                  <View style={styles.notificationTop}>
+                    <View style={[styles.notifIconWrap, !notif.read && styles.notifIconWrapUnread]}>
+                      <Bell color={!notif.read ? Colors.accent : Colors.textMuted} size={13} />
+                    </View>
+                    <View style={styles.notifContent}>
+                      <View style={styles.notifTitleRow}>
+                        <Text style={[styles.notifTitle, !notif.read && styles.notifTitleUnread]}>{notif.title}</Text>
+                        {!notif.read && <View style={styles.unreadDot} />}
+                      </View>
+                      <Text style={styles.notifMessage} numberOfLines={2}>{notif.message}</Text>
+                      <Text style={styles.notifTime}>
+                        {new Date(notif.createdAt).toLocaleDateString()} at {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>UPCOMING APPOINTMENTS</Text>
@@ -231,4 +295,20 @@ const styles = StyleSheet.create({
   logoutBtn: { backgroundColor: Colors.errorMuted, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderColor: Colors.errorBorder, marginTop: 8 },
   logoutText: { color: Colors.error, fontSize: 15, fontWeight: '600' as const },
   versionText: { color: Colors.textDim, fontSize: 11, textAlign: 'center', marginTop: 24 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  markAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 8 },
+  markAllText: { color: Colors.teal, fontSize: 11, fontWeight: '600' as const },
+  notificationsList: { gap: 8 },
+  notificationCard: { backgroundColor: Colors.surface, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: Colors.border },
+  notificationCardUnread: { borderColor: Colors.accentBorder, backgroundColor: 'rgba(201,165,92,0.05)' },
+  notificationTop: { flexDirection: 'row', gap: 10 },
+  notifIconWrap: { width: 32, height: 32, borderRadius: 10, backgroundColor: Colors.card, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  notifIconWrapUnread: { backgroundColor: Colors.accentMuted },
+  notifContent: { flex: 1 },
+  notifTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
+  notifTitle: { color: Colors.textSecondary, fontSize: 13, fontWeight: '600' as const },
+  notifTitleUnread: { color: Colors.text, fontWeight: '700' as const },
+  unreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.accent },
+  notifMessage: { color: Colors.textSecondary, fontSize: 12, lineHeight: 17, marginBottom: 4 },
+  notifTime: { color: Colors.textMuted, fontSize: 10 },
 });

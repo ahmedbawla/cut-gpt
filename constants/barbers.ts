@@ -23,7 +23,7 @@ export interface BarberProfile {
 
 export interface Appointment {
   id: string;
-visibleToBarber: boolean;
+  visibleToBarber: boolean;
   visibleToCustomer: boolean;
   barberId: string;
   barberName: string;
@@ -35,6 +35,17 @@ visibleToBarber: boolean;
   date: string;
   time: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  createdAt: string;
+}
+
+export interface BarberNotification {
+  id: string;
+  barberId: string;
+  type: 'new_booking' | 'cancellation';
+  title: string;
+  message: string;
+  appointmentId: string;
+  read: boolean;
   createdAt: string;
 }
 

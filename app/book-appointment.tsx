@@ -239,9 +239,12 @@ export default function BookAppointmentScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>SELECT SERVICE</Text>
+          <Text style={styles.sectionTitle}>{haircutName ? 'YOUR SERVICE' : 'SELECT SERVICE'}</Text>
           <View style={styles.servicesList}>
-            {barber.services.map((service) => (
+            {(haircutName
+              ? barber.services.filter((s) => s.haircutName.toLowerCase() === haircutName.toLowerCase())
+              : barber.services
+            ).map((service) => (
               <Pressable
                 key={service.haircutId}
                 onPress={() => {

@@ -199,31 +199,32 @@ const BarberCard = React.memo(({
 
         <Text style={styles.barberBio} numberOfLines={2}>{barber.bio}</Text>
 
-        {matchingService && (
+        {matchingService ? (
           <View style={styles.matchBadge}>
             <Scissors color={Colors.success} size={12} />
             <Text style={styles.matchText}>
-              Offers {matchingService.haircutName} — ${matchingService.rate}
+              {matchingService.haircutName}
             </Text>
+            <Text style={styles.matchRate}>${matchingService.rate}</Text>
+          </View>
+        ) : (
+          <View style={styles.servicesPreview}>
+            <Text style={styles.servicesPreviewLabel}>Services ({barber.services.length})</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.serviceChips}>
+              {barber.services.slice(0, 5).map((s) => (
+                <View key={s.haircutId} style={styles.serviceChip}>
+                  <Text style={styles.serviceChipText}>{s.haircutName}</Text>
+                  <Text style={styles.serviceChipRate}>${s.rate}</Text>
+                </View>
+              ))}
+              {barber.services.length > 5 && (
+                <View style={styles.serviceChip}>
+                  <Text style={styles.serviceChipText}>+{barber.services.length - 5} more</Text>
+                </View>
+              )}
+            </ScrollView>
           </View>
         )}
-
-        <View style={styles.servicesPreview}>
-          <Text style={styles.servicesPreviewLabel}>Services ({barber.services.length})</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.serviceChips}>
-            {barber.services.slice(0, 5).map((s) => (
-              <View key={s.haircutId} style={styles.serviceChip}>
-                <Text style={styles.serviceChipText}>{s.haircutName}</Text>
-                <Text style={styles.serviceChipRate}>${s.rate}</Text>
-              </View>
-            ))}
-            {barber.services.length > 5 && (
-              <View style={styles.serviceChip}>
-                <Text style={styles.serviceChipText}>+{barber.services.length - 5} more</Text>
-              </View>
-            )}
-          </ScrollView>
-        </View>
 
         <Pressable
           onPress={onBook}
@@ -273,7 +274,8 @@ const styles = StyleSheet.create({
   barberAddress: { color: Colors.textMuted, fontSize: 11, marginTop: 2 },
   barberBio: { color: Colors.textSecondary, fontSize: 13, lineHeight: 18, marginBottom: 12 },
   matchBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.successMuted, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(52,199,123,0.2)' },
-  matchText: { color: Colors.success, fontSize: 12, fontWeight: '600' as const },
+  matchText: { color: Colors.success, fontSize: 13, fontWeight: '600' as const, flex: 1 },
+  matchRate: { color: Colors.success, fontSize: 17, fontWeight: '800' as const },
   servicesPreview: { marginBottom: 14 },
   servicesPreviewLabel: { color: Colors.textMuted, fontSize: 10, fontWeight: '600' as const, letterSpacing: 0.5, marginBottom: 8 },
   serviceChips: { gap: 6 },

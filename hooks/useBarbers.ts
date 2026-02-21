@@ -7,6 +7,7 @@ import {
   BarberService,
   BarberLocation,
   Appointment,
+  BarberNotification,
   TEST_BARBER,
 } from '@/constants/barbers';
 
@@ -14,6 +15,7 @@ const BARBERS_KEY = 'barber_profiles';
 const BARBER_AUTH_KEY = 'barber_auth_state';
 const BARBER_USERS_KEY = 'barber_registered_users';
 const APPOINTMENTS_KEY = 'appointments';
+const NOTIFICATIONS_KEY = 'barber_notifications';
 
 interface StoredBarber extends BarberProfile {
   password: string;
@@ -33,6 +35,7 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
   });
   const [barbers, setBarbers] = useState<BarberProfile[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [notifications, setNotifications] = useState<BarberNotification[]>([]);
 
   const barbersQuery = useQuery({
     queryKey: ['barbers'],
@@ -78,6 +81,14 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
     },
   });
 
+  const notificationsQuery = useQuery({
+    queryKey: ['barber-notifications'],
+    queryFn: async () => {
+      const stored = await AsyncStorage.getItem(NOTIFICATIONS_KEY);
+      return stored ? (JSON.parse(stored) as BarberNotification[]) : [];
+    },
+  });
+
   useEffect(() => {
     if (barbersQuery.data) setBarbers(barbersQuery.data);
   }, [barbersQuery.data]);
@@ -89,6 +100,10 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
   useEffect(() => {
     if (appointmentsQuery.data) setAppointments(appointmentsQuery.data);
   }, [appointmentsQuery.data]);
+
+  useEffect(() => {
+    if (notificationsQuery.data) setNotifications(notificationsQuery.data);
+  }, [notificationsQuery.data]);
 
   const barberLoginMutation = useMutation({
     mutationFn: async ({ email, password }: { email: string; password: string }) => {
@@ -182,12 +197,31 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
     mutationFn: async (appointment: Appointment) => {
       const updated = [...appointments, appointment];
       await AsyncStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(updated));
+
+      const notification: BarberNotification = {
+        id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+        barberId: appointment.barberId,
+        type: 'new_booking',
+        title: 'New Appointment',
+        message: `${appointment.customerName} booked a ${appointment.haircutName} for ${appointment.date} at ${appointment.time} — ${appointment.rate}`,
+        appointmentId: appointment.id,
+        read: false,
+        createdAt: new Date().toISOString(),
+      };
+      const storedNotifs = await AsyncStorage.getItem(NOTIFICATIONS_KEY);
+      const currentNotifs: BarberNotification[] = storedNotifs ? JSON.parse(storedNotifs) : [];
+      const updatedNotifs = [notification, ...currentNotifs];
+      await AsyncStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updatedNotifs));
+      setNotifications(updatedNotifs);
+
       console.log('[Appointments] Booked:', appointment.id);
+      console.log('[Notifications] Created notification for barber:', appointment.barberId);
       return updated;
     },
     onSuccess: (updated) => {
       setAppointments(updated);
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['barber-notifications'] });
     },
   });
 
@@ -245,10 +279,59 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
     [appointments]
   );
 
+  const getBarberNotifications = useCallback(
+    (barberId: string) => notifications.filter((n) => n.barberId === barberId),
+    [notifications]
+  );
+
+  const getUnreadCount = useCallback(
+    (barberId: string) => notifications.filter((n) => n.barberId === barberId && !n.read).length,
+    [notifications]
+  );
+
+  const markNotificationReadMutation = useMutation({
+    mutationFn: async (notificationId: string) => {
+      const updated = notifications.map((n) =>
+        n.id === notificationId ? { ...n, read: true } : n
+      );
+      await AsyncStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updated));
+      return updated;
+    },
+    onSuccess: (updated) => {
+      setNotifications(updated);
+      queryClient.invalidateQueries({ queryKey: ['barber-notifications'] });
+    },
+  });
+
+  const markAllNotificationsReadMutation = useMutation({
+    mutationFn: async (barberId: string) => {
+      const updated = notifications.map((n) =>
+        n.barberId === barberId ? { ...n, read: true } : n
+      );
+      await AsyncStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updated));
+      return updated;
+    },
+    onSuccess: (updated) => {
+      setNotifications(updated);
+      queryClient.invalidateQueries({ queryKey: ['barber-notifications'] });
+    },
+  });
+
+  const markNotificationRead = useCallback(
+    (id: string) => markNotificationReadMutation.mutate(id),
+    [markNotificationReadMutation]
+  );
+
+  const markAllNotificationsRead = useCallback(
+    (barberId: string) => markAllNotificationsReadMutation.mutate(barberId),
+    [markAllNotificationsReadMutation]
+  );
+
   return {
     barbers,
     barberAuth,
     appointments,
+    notifications,
     barberLogin,
     barberSignup,
     barberLogout,
@@ -256,6 +339,10 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
     cancelAppointment,
     getBarberAppointments,
     getCustomerAppointments,
+    getBarberNotifications,
+    getUnreadCount,
+    markNotificationRead,
+    markAllNotificationsRead,
     isBarberLoggingIn: barberLoginMutation.isPending,
     isBarberSigningUp: barberSignupMutation.isPending,
     isBooking: bookAppointmentMutation.isPending,
