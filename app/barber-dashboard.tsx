@@ -44,6 +44,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Camera,
+  MoreVertical,
+  CheckCircle,
+  XCircle,
+  Settings,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -55,8 +59,9 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_WIDTH = SCREEN_WIDTH - 80;
 const IMAGE_HEIGHT = IMAGE_WIDTH * 1.33;
 
-type DashboardTab = 'services' | 'appointments' | 'profile';
+type DashboardTab = 'appointments' | 'profile';
 type AppointmentView = 'list' | 'calendar';
+type ProfileSubView = 'main' | 'services';
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = [
@@ -134,7 +139,7 @@ const AppointmentImageViewer = React.memo(({ angleImages }: { angleImages: strin
         </View>
         <Pressable onPress={togglePlayback} style={imgStyles.playBtn} hitSlop={8}>
           {isPlaying ? <Pause color={Colors.black} size={14} /> : <Play color={Colors.black} size={14} />}
-          <Text style={imgStyles.playText}>{isPlaying ? 'Pause' : '360\u00B0 View'}</Text>
+          <Text style={imgStyles.playText}>{isPlaying ? 'Pause' : '360° View'}</Text>
         </Pressable>
       </View>
     </View>
@@ -142,10 +147,17 @@ const AppointmentImageViewer = React.memo(({ angleImages }: { angleImages: strin
 });
 AppointmentImageViewer.displayName = 'AppointmentImageViewer';
 
-interface AppointmentCardProps { apt: Appointment; }
+interface AppointmentCardProps {
+  apt: Appointment;
+  isBarber?: boolean;
+  onComplete?: (id: string) => void;
+  onCancel?: (id: string) => void;
+  onDelete?: (id: string) => void;
+}
 
-const AppointmentCard = React.memo(({ apt }: AppointmentCardProps) => {
+const AppointmentCard = React.memo(({ apt, isBarber, onComplete, onCancel, onDelete }: AppointmentCardProps) => {
   const [expanded, setExpanded] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   const heightAnim = useRef(new Animated.Value(0)).current;
   const hasImages = !!(apt.frontImage || (apt.angleImages && apt.angleImages.length > 0));
 
@@ -161,8 +173,35 @@ const AppointmentCard = React.memo(({ apt }: AppointmentCardProps) => {
     outputRange: [0, apt.angleImages && apt.angleImages.length > 0 ? IMAGE_HEIGHT + 120 : apt.frontImage ? IMAGE_HEIGHT + 60 : 0],
   });
 
+  const handleComplete = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert('Complete Appointment', `Mark ${apt.customerName}'s appointment as completed?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Complete', onPress: () => { onComplete?.(apt.id); setShowActions(false); } },
+    ]);
+  }, [apt, onComplete]);
+
+  const handleCancel = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert('Cancel Appointment', `Cancel ${apt.customerName}'s ${apt.haircutName} appointment?`, [
+      { text: 'No', style: 'cancel' },
+      { text: 'Cancel It', style: 'destructive', onPress: () => { onCancel?.(apt.id); setShowActions(false); } },
+    ]);
+  }, [apt, onCancel]);
+
+  const handleDelete = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    Alert.alert('Delete Appointment', 'This will permanently remove this appointment.', [
+      { text: 'Keep', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => { onDelete?.(apt.id); setShowActions(false); } },
+    ]);
+  }, [apt, onDelete]);
+
+  const statusColor = apt.status === 'confirmed' ? Colors.success : apt.status === 'completed' ? Colors.teal : apt.status === 'cancelled' ? Colors.error : Colors.accent;
+  const statusBg = apt.status === 'confirmed' ? Colors.successMuted : apt.status === 'completed' ? Colors.tealMuted : apt.status === 'cancelled' ? Colors.errorMuted : Colors.accentMuted;
+
   return (
-    <View style={styles.appointmentCard}>
+    <View style={[styles.appointmentCard, apt.status === 'cancelled' && { opacity: 0.6 }]}>
       <Pressable onPress={hasImages ? toggleExpand : undefined} style={styles.appointmentCardInner}>
         <View style={styles.appointmentTop}>
           <View style={styles.appointmentLeft}>
@@ -177,9 +216,18 @@ const AppointmentCard = React.memo(({ apt }: AppointmentCardProps) => {
                 <ImageIcon color={Colors.teal} size={10} />
               </View>
             )}
-            <View style={[styles.statusBadge, apt.status === 'confirmed' ? styles.statusConfirmed : styles.statusPending]}>
-              <Text style={[styles.statusText, apt.status === 'confirmed' ? styles.statusTextConfirmed : styles.statusTextPending]}>{apt.status}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
+              <Text style={[styles.statusText, { color: statusColor }]}>{apt.status}</Text>
             </View>
+            {isBarber && apt.status !== 'cancelled' && apt.status !== 'completed' && (
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowActions(!showActions); }}
+                style={styles.moreBtn}
+                hitSlop={8}
+              >
+                <MoreVertical color={Colors.textMuted} size={16} />
+              </Pressable>
+            )}
           </View>
         </View>
         <View style={styles.appointmentDetails}>
@@ -187,6 +235,23 @@ const AppointmentCard = React.memo(({ apt }: AppointmentCardProps) => {
           <Text style={styles.appointmentTime}>{apt.date} at {apt.time}</Text>
           <Text style={styles.appointmentRate}>${apt.rate}</Text>
         </View>
+
+        {showActions && isBarber && (
+          <View style={styles.actionRow}>
+            <Pressable onPress={handleComplete} style={styles.actionBtnComplete}>
+              <CheckCircle color={Colors.black} size={14} />
+              <Text style={styles.actionBtnText}>Complete</Text>
+            </Pressable>
+            <Pressable onPress={handleCancel} style={styles.actionBtnCancel}>
+              <XCircle color={Colors.error} size={14} />
+              <Text style={[styles.actionBtnText, { color: Colors.error }]}>Cancel</Text>
+            </Pressable>
+            <Pressable onPress={handleDelete} style={styles.actionBtnDelete}>
+              <Trash2 color={Colors.error} size={14} />
+            </Pressable>
+          </View>
+        )}
+
         {hasImages && (
           <View style={styles.expandHint}>
             <Eye color={Colors.textMuted} size={12} />
@@ -251,14 +316,10 @@ const ServiceEditor = React.memo(({ service, onUpdate, onRemove }: ServiceEditor
 
   const handleRemove = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      'Remove Service',
-      `Remove "${service.haircutName}" from your services?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Remove', style: 'destructive', onPress: () => onRemove(service.haircutId) },
-      ]
-    );
+    Alert.alert('Remove Service', `Remove "${service.haircutName}" from your services?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => onRemove(service.haircutId) },
+    ]);
   }, [service.haircutId, service.haircutName, onRemove]);
 
   if (editing) {
@@ -274,26 +335,12 @@ const ServiceEditor = React.memo(({ service, onUpdate, onRemove }: ServiceEditor
           <Text style={styles.serviceEditLabel}>PRICE</Text>
           <View style={styles.serviceEditInputWrap}>
             <DollarSign color={Colors.accent} size={14} />
-            <TextInput
-              style={styles.serviceEditInput}
-              value={editRate}
-              onChangeText={setEditRate}
-              keyboardType="numeric"
-              testID={`edit-rate-${service.haircutId}`}
-            />
+            <TextInput style={styles.serviceEditInput} value={editRate} onChangeText={setEditRate} keyboardType="numeric" testID={`edit-rate-${service.haircutId}`} />
           </View>
         </View>
         <View style={styles.serviceEditRow}>
           <Text style={styles.serviceEditLabel}>DESCRIPTION</Text>
-          <TextInput
-            style={styles.serviceEditDescInput}
-            value={editDesc}
-            onChangeText={setEditDesc}
-            placeholder="Describe this service..."
-            placeholderTextColor={Colors.textMuted}
-            multiline
-            testID={`edit-desc-${service.haircutId}`}
-          />
+          <TextInput style={styles.serviceEditDescInput} value={editDesc} onChangeText={setEditDesc} placeholder="Describe this service..." placeholderTextColor={Colors.textMuted} multiline testID={`edit-desc-${service.haircutId}`} />
         </View>
         <View style={styles.serviceEditActions}>
           <Pressable onPress={handleCancel} style={styles.serviceEditCancelBtn}>
@@ -310,13 +357,7 @@ const ServiceEditor = React.memo(({ service, onUpdate, onRemove }: ServiceEditor
   }
 
   return (
-    <Pressable
-      onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setEditing(true);
-      }}
-      style={styles.serviceViewCard}
-    >
+    <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setEditing(true); }} style={styles.serviceViewCard}>
       <View style={styles.serviceViewTop}>
         <View style={styles.serviceViewLeft}>
           <View style={styles.serviceIconWrap}>
@@ -341,12 +382,7 @@ const ServiceEditor = React.memo(({ service, onUpdate, onRemove }: ServiceEditor
 });
 ServiceEditor.displayName = 'ServiceEditor';
 
-function AddServiceModal({
-  visible,
-  existingServiceIds,
-  onAdd,
-  onClose,
-}: {
+function AddServiceModal({ visible, existingServiceIds, onAdd, onClose }: {
   visible: boolean;
   existingServiceIds: string[];
   onAdd: (service: BarberService) => void;
@@ -357,54 +393,24 @@ function AddServiceModal({
   const [rate, setRate] = useState('');
   const [description, setDescription] = useState('');
 
-  const availableHaircuts = useMemo(() => {
-    return HAIRCUTS.filter(
-      (h) => h.id !== 'custom' && !existingServiceIds.includes(h.id)
-    );
-  }, [existingServiceIds]);
+  const availableHaircuts = useMemo(() => HAIRCUTS.filter((h) => h.id !== 'custom' && !existingServiceIds.includes(h.id)), [existingServiceIds]);
 
   const handleAdd = useCallback(() => {
     const parsedRate = parseInt(rate, 10);
-    if (isNaN(parsedRate) || parsedRate <= 0) {
-      Alert.alert('Invalid Price', 'Please enter a valid price.');
-      return;
-    }
-
+    if (isNaN(parsedRate) || parsedRate <= 0) { Alert.alert('Invalid Price', 'Please enter a valid price.'); return; }
     if (selectedHaircut === '__custom__') {
-      if (!customName.trim()) {
-        Alert.alert('Missing Name', 'Please enter a service name.');
-        return;
-      }
-      onAdd({
-        haircutId: `custom_${Date.now()}`,
-        haircutName: customName.trim(),
-        rate: parsedRate,
-        description: description.trim() || undefined,
-      });
+      if (!customName.trim()) { Alert.alert('Missing Name', 'Please enter a service name.'); return; }
+      onAdd({ haircutId: `custom_${Date.now()}`, haircutName: customName.trim(), rate: parsedRate, description: description.trim() || undefined });
     } else if (selectedHaircut) {
       const haircut = HAIRCUTS.find((h) => h.id === selectedHaircut);
       if (!haircut) return;
-      onAdd({
-        haircutId: haircut.id,
-        haircutName: haircut.name,
-        rate: parsedRate,
-        description: description.trim() || haircut.description,
-      });
+      onAdd({ haircutId: haircut.id, haircutName: haircut.name, rate: parsedRate, description: description.trim() || haircut.description });
     }
-
-    setSelectedHaircut(null);
-    setCustomName('');
-    setRate('');
-    setDescription('');
-    onClose();
+    setSelectedHaircut(null); setCustomName(''); setRate(''); setDescription(''); onClose();
   }, [selectedHaircut, customName, rate, description, onAdd, onClose]);
 
   const handleClose = useCallback(() => {
-    setSelectedHaircut(null);
-    setCustomName('');
-    setRate('');
-    setDescription('');
-    onClose();
+    setSelectedHaircut(null); setCustomName(''); setRate(''); setDescription(''); onClose();
   }, [onClose]);
 
   return (
@@ -418,16 +424,9 @@ function AddServiceModal({
                 <X color={Colors.textSecondary} size={20} />
               </Pressable>
             </View>
-
             {!selectedHaircut ? (
               <ScrollView style={modalStyles.listScroll} showsVerticalScrollIndicator={false}>
-                <Pressable
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    setSelectedHaircut('__custom__');
-                  }}
-                  style={modalStyles.haircutOption}
-                >
+                <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedHaircut('__custom__'); }} style={modalStyles.haircutOption}>
                   <View style={[modalStyles.haircutIconWrap, { backgroundColor: Colors.accentMuted }]}>
                     <Plus color={Colors.accent} size={16} />
                   </View>
@@ -437,18 +436,8 @@ function AddServiceModal({
                   </View>
                 </Pressable>
                 {availableHaircuts.map((h) => (
-                  <Pressable
-                    key={h.id}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setSelectedHaircut(h.id);
-                      setDescription(h.description);
-                    }}
-                    style={modalStyles.haircutOption}
-                  >
-                    <View style={modalStyles.haircutIconWrap}>
-                      <Scissors color={Colors.teal} size={14} />
-                    </View>
+                  <Pressable key={h.id} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedHaircut(h.id); setDescription(h.description); }} style={modalStyles.haircutOption}>
+                    <View style={modalStyles.haircutIconWrap}><Scissors color={Colors.teal} size={14} /></View>
                     <View style={{ flex: 1 }}>
                       <Text style={modalStyles.haircutOptionName}>{h.name}</Text>
                       <Text style={modalStyles.haircutOptionDesc} numberOfLines={1}>{h.description}</Text>
@@ -461,50 +450,25 @@ function AddServiceModal({
                 {selectedHaircut === '__custom__' && (
                   <View style={modalStyles.formField}>
                     <Text style={modalStyles.formLabel}>SERVICE NAME</Text>
-                    <TextInput
-                      style={modalStyles.formInput}
-                      value={customName}
-                      onChangeText={setCustomName}
-                      placeholder="e.g. Line Up, Beard Trim..."
-                      placeholderTextColor={Colors.textMuted}
-                      testID="add-service-name"
-                    />
+                    <TextInput style={modalStyles.formInput} value={customName} onChangeText={setCustomName} placeholder="e.g. Line Up, Beard Trim..." placeholderTextColor={Colors.textMuted} testID="add-service-name" />
                   </View>
                 )}
                 {selectedHaircut !== '__custom__' && (
                   <View style={modalStyles.selectedPreview}>
                     <Scissors color={Colors.teal} size={16} />
-                    <Text style={modalStyles.selectedName}>
-                      {HAIRCUTS.find((h) => h.id === selectedHaircut)?.name ?? ''}
-                    </Text>
+                    <Text style={modalStyles.selectedName}>{HAIRCUTS.find((h) => h.id === selectedHaircut)?.name ?? ''}</Text>
                   </View>
                 )}
                 <View style={modalStyles.formField}>
                   <Text style={modalStyles.formLabel}>PRICE ($)</Text>
                   <View style={modalStyles.priceRow}>
                     <DollarSign color={Colors.accent} size={16} />
-                    <TextInput
-                      style={modalStyles.formInputPrice}
-                      value={rate}
-                      onChangeText={setRate}
-                      placeholder="0"
-                      placeholderTextColor={Colors.textMuted}
-                      keyboardType="numeric"
-                      testID="add-service-rate"
-                    />
+                    <TextInput style={modalStyles.formInputPrice} value={rate} onChangeText={setRate} placeholder="0" placeholderTextColor={Colors.textMuted} keyboardType="numeric" testID="add-service-rate" />
                   </View>
                 </View>
                 <View style={modalStyles.formField}>
                   <Text style={modalStyles.formLabel}>DESCRIPTION (optional)</Text>
-                  <TextInput
-                    style={[modalStyles.formInput, { minHeight: 70, textAlignVertical: 'top' as const }]}
-                    value={description}
-                    onChangeText={setDescription}
-                    placeholder="Describe this service..."
-                    placeholderTextColor={Colors.textMuted}
-                    multiline
-                    testID="add-service-desc"
-                  />
+                  <TextInput style={[modalStyles.formInput, { minHeight: 70, textAlignVertical: 'top' as const }]} value={description} onChangeText={setDescription} placeholder="Describe this service..." placeholderTextColor={Colors.textMuted} multiline testID="add-service-desc" />
                 </View>
                 <View style={modalStyles.formActions}>
                   <Pressable onPress={() => setSelectedHaircut(null)} style={modalStyles.backBtn}>
@@ -525,48 +489,41 @@ function AddServiceModal({
   );
 }
 
-function ServicesTab({ barber, onUpdateServices }: {
+function ServicesView({ barber, onUpdateServices, onBack }: {
   barber: NonNullable<ReturnType<typeof useBarbers>['barberAuth']['barber']>;
   onUpdateServices: (services: BarberService[]) => void;
+  onBack: () => void;
 }) {
   const [showAddModal, setShowAddModal] = useState(false);
 
   const handleUpdateService = useCallback((haircutId: string, updates: { rate?: number; description?: string }) => {
-    const updated = barber.services.map((s) =>
-      s.haircutId === haircutId ? { ...s, ...updates } : s
-    );
+    const updated = barber.services.map((s) => s.haircutId === haircutId ? { ...s, ...updates } : s);
     onUpdateServices(updated);
   }, [barber.services, onUpdateServices]);
 
   const handleRemoveService = useCallback((haircutId: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const updated = barber.services.filter((s) => s.haircutId !== haircutId);
-    onUpdateServices(updated);
+    onUpdateServices(barber.services.filter((s) => s.haircutId !== haircutId));
   }, [barber.services, onUpdateServices]);
 
   const handleAddService = useCallback((service: BarberService) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const updated = [...barber.services, service];
-    onUpdateServices(updated);
+    onUpdateServices([...barber.services, service]);
   }, [barber.services, onUpdateServices]);
 
   const existingIds = useMemo(() => barber.services.map((s) => s.haircutId), [barber.services]);
 
   return (
     <ScrollView contentContainerStyle={styles.tabContent} showsVerticalScrollIndicator={false}>
-      <View style={styles.tabHeaderRow}>
-        <View>
+      <View style={styles.servicesHeader}>
+        <Pressable onPress={onBack} style={styles.servicesBackBtn} hitSlop={8}>
+          <ChevronLeft color={Colors.text} size={20} />
+        </Pressable>
+        <View style={{ flex: 1 }}>
           <Text style={styles.tabHeaderTitle}>Your Services</Text>
           <Text style={styles.tabHeaderSub}>{barber.services.length} services offered</Text>
         </View>
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setShowAddModal(true);
-          }}
-          style={styles.addServiceBtn}
-          testID="add-service-btn"
-        >
+        <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowAddModal(true); }} style={styles.addServiceBtn} testID="add-service-btn">
           <Plus color={Colors.black} size={16} />
           <Text style={styles.addServiceBtnText}>Add</Text>
         </Pressable>
@@ -574,12 +531,7 @@ function ServicesTab({ barber, onUpdateServices }: {
       <Text style={styles.tapHint}>Tap any service to edit or remove</Text>
       <View style={styles.servicesList}>
         {barber.services.map((service) => (
-          <ServiceEditor
-            key={service.haircutId}
-            service={service}
-            onUpdate={handleUpdateService}
-            onRemove={handleRemoveService}
-          />
+          <ServiceEditor key={service.haircutId} service={service} onUpdate={handleUpdateService} onRemove={handleRemoveService} />
         ))}
         {barber.services.length === 0 && (
           <View style={styles.emptyCard}>
@@ -589,29 +541,26 @@ function ServicesTab({ barber, onUpdateServices }: {
           </View>
         )}
       </View>
-      <AddServiceModal
-        visible={showAddModal}
-        existingServiceIds={existingIds}
-        onAdd={handleAddService}
-        onClose={() => setShowAddModal(false)}
-      />
+      <AddServiceModal visible={showAddModal} existingServiceIds={existingIds} onAdd={handleAddService} onClose={() => setShowAddModal(false)} />
     </ScrollView>
   );
 }
 
-function CalendarView({ appointments, year, month }: {
+function CalendarView({ appointments, year, month, onComplete, onCancel, onDelete }: {
   appointments: Appointment[];
   year: number;
   month: number;
+  onComplete?: (id: string) => void;
+  onCancel?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const appointmentsByDate = useMemo(() => {
     const map: Record<string, Appointment[]> = {};
     appointments.forEach((apt) => {
-      const dateStr = apt.date;
-      if (!map[dateStr]) map[dateStr] = [];
-      map[dateStr].push(apt);
+      if (!map[apt.date]) map[apt.date] = [];
+      map[apt.date].push(apt);
     });
     return map;
   }, [appointments]);
@@ -621,12 +570,8 @@ function CalendarView({ appointments, year, month }: {
 
   const calendarDays = useMemo(() => {
     const days: Array<{ day: number; dateKey: string } | null> = [];
-    for (let i = 0; i < firstDay; i++) {
-      days.push(null);
-    }
-    for (let d = 1; d <= daysInMonth; d++) {
-      days.push({ day: d, dateKey: formatDateKey(year, month, d) });
-    }
+    for (let i = 0; i < firstDay; i++) days.push(null);
+    for (let d = 1; d <= daysInMonth; d++) days.push({ day: d, dateKey: formatDateKey(year, month, d) });
     return days;
   }, [year, month, daysInMonth, firstDay]);
 
@@ -642,35 +587,17 @@ function CalendarView({ appointments, year, month }: {
     <View>
       <View style={calStyles.grid}>
         {DAYS_OF_WEEK.map((d) => (
-          <View key={d} style={calStyles.dayHeader}>
-            <Text style={calStyles.dayHeaderText}>{d}</Text>
-          </View>
+          <View key={d} style={calStyles.dayHeader}><Text style={calStyles.dayHeaderText}>{d}</Text></View>
         ))}
         {calendarDays.map((item, idx) => {
-          if (!item) {
-            return <View key={`empty-${idx}`} style={calStyles.dayCell} />;
-          }
+          if (!item) return <View key={`empty-${idx}`} style={calStyles.dayCell} />;
           const count = appointmentsByDate[item.dateKey]?.length ?? 0;
           const isToday = item.dateKey === todayKey;
           const isSelected = item.dateKey === selectedDate;
           return (
-            <Pressable
-              key={item.dateKey}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setSelectedDate(isSelected ? null : item.dateKey);
-              }}
-              style={[
-                calStyles.dayCell,
-                isToday && calStyles.dayCellToday,
-                isSelected && calStyles.dayCellSelected,
-              ]}
-            >
-              <Text style={[
-                calStyles.dayNum,
-                isToday && calStyles.dayNumToday,
-                isSelected && calStyles.dayNumSelected,
-              ]}>{item.day}</Text>
+            <Pressable key={item.dateKey} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedDate(isSelected ? null : item.dateKey); }}
+              style={[calStyles.dayCell, isToday && calStyles.dayCellToday, isSelected && calStyles.dayCellSelected]}>
+              <Text style={[calStyles.dayNum, isToday && calStyles.dayNumToday, isSelected && calStyles.dayNumSelected]}>{item.day}</Text>
               {count > 0 && (
                 <View style={[calStyles.countBadge, isSelected && calStyles.countBadgeSelected]}>
                   <Text style={[calStyles.countText, isSelected && calStyles.countTextSelected]}>{count}</Text>
@@ -680,21 +607,15 @@ function CalendarView({ appointments, year, month }: {
           );
         })}
       </View>
-
       {selectedDate && (
         <View style={calStyles.selectedSection}>
-          <Text style={calStyles.selectedTitle}>
-            {selectedAppointments.length} appointment{selectedAppointments.length !== 1 ? 's' : ''} on {selectedDate}
-          </Text>
+          <Text style={calStyles.selectedTitle}>{selectedAppointments.length} appointment{selectedAppointments.length !== 1 ? 's' : ''} on {selectedDate}</Text>
           {selectedAppointments.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Clock color={Colors.textMuted} size={22} />
-              <Text style={styles.emptyText}>No appointments</Text>
-            </View>
+            <View style={styles.emptyCard}><Clock color={Colors.textMuted} size={22} /><Text style={styles.emptyText}>No appointments</Text></View>
           ) : (
             <View style={{ gap: 10 }}>
               {selectedAppointments.map((apt) => (
-                <AppointmentCard key={apt.id} apt={apt} />
+                <AppointmentCard key={apt.id} apt={apt} isBarber onComplete={onComplete} onCancel={onCancel} onDelete={onDelete} />
               ))}
             </View>
           )}
@@ -707,9 +628,10 @@ function CalendarView({ appointments, year, month }: {
 function AppointmentsTab({ barber }: {
   barber: NonNullable<ReturnType<typeof useBarbers>['barberAuth']['barber']>;
 }) {
-  const { getBarberAppointments, getBarberNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead } = useBarbers();
+  const { getBarberAppointments, getBarberNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead, updateAppointment, cancelAppointment, deleteAppointment } = useBarbers();
   const appointments = getBarberAppointments(barber.id);
-  const upcomingAppointments = appointments.filter((a) => a.status !== 'completed');
+  const allAppointments = useBarbers().appointments.filter((a) => a.barberId === barber.id);
+  const upcomingAppointments = allAppointments.filter((a) => a.status !== 'completed' && a.status !== 'cancelled');
   const barberNotifications = getBarberNotifications(barber.id);
   const unreadCount = getUnreadCount(barber.id);
 
@@ -717,46 +639,44 @@ function AppointmentsTab({ barber }: {
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
+  const handleComplete = useCallback((id: string) => {
+    updateAppointment(id, { status: 'completed' });
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  }, [updateAppointment]);
+
+  const handleCancel = useCallback((id: string) => {
+    cancelAppointment(id);
+  }, [cancelAppointment]);
+
+  const handleDelete = useCallback((id: string) => {
+    deleteAppointment(id);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  }, [deleteAppointment]);
+
   const goToPrevMonth = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (calendarMonth === 0) {
-      setCalendarMonth(11);
-      setCalendarYear((y) => y - 1);
-    } else {
-      setCalendarMonth((m) => m - 1);
-    }
+    if (calendarMonth === 0) { setCalendarMonth(11); setCalendarYear((y) => y - 1); } else { setCalendarMonth((m) => m - 1); }
   }, [calendarMonth]);
 
   const goToNextMonth = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (calendarMonth === 11) {
-      setCalendarMonth(0);
-      setCalendarYear((y) => y + 1);
-    } else {
-      setCalendarMonth((m) => m + 1);
-    }
+    if (calendarMonth === 11) { setCalendarMonth(0); setCalendarYear((y) => y + 1); } else { setCalendarMonth((m) => m + 1); }
   }, [calendarMonth]);
 
   return (
     <ScrollView contentContainerStyle={styles.tabContent} showsVerticalScrollIndicator={false}>
       <View style={styles.tabHeaderRow}>
         <View>
-          <Text style={styles.tabHeaderTitle}>Appointments</Text>
+          <Text style={styles.tabHeaderTitle}>Bookings</Text>
           <Text style={styles.tabHeaderSub}>{upcomingAppointments.length} upcoming</Text>
         </View>
         <View style={styles.viewToggle}>
-          <Pressable
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setViewMode('list'); }}
-            style={[styles.viewToggleBtn, viewMode === 'list' && styles.viewToggleBtnActive]}
-            testID="view-list"
-          >
+          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setViewMode('list'); }}
+            style={[styles.viewToggleBtn, viewMode === 'list' && styles.viewToggleBtnActive]} testID="view-list">
             <List color={viewMode === 'list' ? Colors.teal : Colors.textMuted} size={18} />
           </Pressable>
-          <Pressable
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setViewMode('calendar'); }}
-            style={[styles.viewToggleBtn, viewMode === 'calendar' && styles.viewToggleBtnActive]}
-            testID="view-calendar"
-          >
+          <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setViewMode('calendar'); }}
+            style={[styles.viewToggleBtn, viewMode === 'calendar' && styles.viewToggleBtnActive]} testID="view-calendar">
             <Calendar color={viewMode === 'calendar' ? Colors.teal : Colors.textMuted} size={18} />
           </Pressable>
         </View>
@@ -769,12 +689,7 @@ function AppointmentsTab({ barber }: {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>NOTIFICATIONS</Text>
                 {unreadCount > 0 && (
-                  <Pressable
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); markAllNotificationsRead(barber.id); }}
-                    hitSlop={8}
-                    style={styles.markAllBtn}
-                    testID="mark-all-read"
-                  >
+                  <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); markAllNotificationsRead(barber.id); }} hitSlop={8} style={styles.markAllBtn} testID="mark-all-read">
                     <CheckCheck color={Colors.teal} size={13} />
                     <Text style={styles.markAllText}>Mark all read</Text>
                   </Pressable>
@@ -782,12 +697,8 @@ function AppointmentsTab({ barber }: {
               </View>
               <View style={styles.notificationsList}>
                 {barberNotifications.slice(0, 10).map((notif) => (
-                  <Pressable
-                    key={notif.id}
-                    onPress={() => { if (!notif.read) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); markNotificationRead(notif.id); } }}
-                    style={[styles.notificationCard, !notif.read && styles.notificationCardUnread]}
-                    testID={`notif-${notif.id}`}
-                  >
+                  <Pressable key={notif.id} onPress={() => { if (!notif.read) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); markNotificationRead(notif.id); } }}
+                    style={[styles.notificationCard, !notif.read && styles.notificationCardUnread]} testID={`notif-${notif.id}`}>
                     <View style={styles.notificationTop}>
                       <View style={[styles.notifIconWrap, !notif.read && styles.notifIconWrapUnread]}>
                         <Bell color={!notif.read ? Colors.accent : Colors.textMuted} size={13} />
@@ -798,9 +709,7 @@ function AppointmentsTab({ barber }: {
                           {!notif.read && <View style={styles.unreadDot} />}
                         </View>
                         <Text style={styles.notifMessage} numberOfLines={2}>{notif.message}</Text>
-                        <Text style={styles.notifTime}>
-                          {new Date(notif.createdAt).toLocaleDateString()} at {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Text>
+                        <Text style={styles.notifTime}>{new Date(notif.createdAt).toLocaleDateString()} at {new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
                       </View>
                     </View>
                   </Pressable>
@@ -819,7 +728,7 @@ function AppointmentsTab({ barber }: {
           ) : (
             <View style={styles.appointmentsList}>
               {upcomingAppointments.map((apt) => (
-                <AppointmentCard key={apt.id} apt={apt} />
+                <AppointmentCard key={apt.id} apt={apt} isBarber onComplete={handleComplete} onCancel={handleCancel} onDelete={handleDelete} />
               ))}
             </View>
           )}
@@ -827,32 +736,26 @@ function AppointmentsTab({ barber }: {
       ) : (
         <>
           <View style={calStyles.monthNav}>
-            <Pressable onPress={goToPrevMonth} style={calStyles.monthNavBtn} hitSlop={8}>
-              <ChevronLeft color={Colors.text} size={20} />
-            </Pressable>
+            <Pressable onPress={goToPrevMonth} style={calStyles.monthNavBtn} hitSlop={8}><ChevronLeft color={Colors.text} size={20} /></Pressable>
             <Text style={calStyles.monthTitle}>{MONTH_NAMES[calendarMonth]} {calendarYear}</Text>
-            <Pressable onPress={goToNextMonth} style={calStyles.monthNavBtn} hitSlop={8}>
-              <ChevronRight color={Colors.text} size={20} />
-            </Pressable>
+            <Pressable onPress={goToNextMonth} style={calStyles.monthNavBtn} hitSlop={8}><ChevronRight color={Colors.text} size={20} /></Pressable>
           </View>
-          <CalendarView
-            appointments={appointments}
-            year={calendarYear}
-            month={calendarMonth}
-          />
+          <CalendarView appointments={allAppointments} year={calendarYear} month={calendarMonth} onComplete={handleComplete} onCancel={handleCancel} onDelete={handleDelete} />
         </>
       )}
     </ScrollView>
   );
 }
 
-function ProfileTab({ barber, onUpdateProfile, isSaving }: {
+function ProfileTab({ barber, onUpdateProfile, onUpdateServices, isSaving }: {
   barber: NonNullable<ReturnType<typeof useBarbers>['barberAuth']['barber']>;
   onUpdateProfile: (updates: { fullName?: string; bio?: string; avatarUrl?: string | null; location?: { address: string; latitude: number; longitude: number } }) => void;
+  onUpdateServices: (services: BarberService[]) => void;
   isSaving: boolean;
 }) {
   const router = useRouter();
   const { barberLogout } = useBarbers();
+  const [subView, setSubView] = useState<ProfileSubView>('main');
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(barber.fullName);
   const [editBio, setEditBio] = useState(barber.bio);
@@ -864,17 +767,9 @@ function ProfileTab({ barber, onUpdateProfile, isSaving }: {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setIsPickingImage(true);
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
-
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
       if (!result.canceled && result.assets[0]) {
-        const uri = result.assets[0].uri;
-        console.log('[BarberProfile] Picked avatar:', uri);
-        onUpdateProfile({ avatarUrl: uri });
+        onUpdateProfile({ avatarUrl: result.assets[0].uri });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (err) {
@@ -891,21 +786,13 @@ function ProfileTab({ barber, onUpdateProfile, isSaving }: {
       fullName: editName.trim() || barber.fullName,
       bio: editBio.trim(),
       avatarUrl: editAvatar.trim() || null,
-      location: {
-        address: editAddress.trim() || barber.location.address,
-        latitude: barber.location.latitude,
-        longitude: barber.location.longitude,
-      },
+      location: { address: editAddress.trim() || barber.location.address, latitude: barber.location.latitude, longitude: barber.location.longitude },
     });
     setIsEditing(false);
   }, [editName, editBio, editAddress, editAvatar, barber, onUpdateProfile]);
 
   const handleCancel = useCallback(() => {
-    setEditName(barber.fullName);
-    setEditBio(barber.bio);
-    setEditAddress(barber.location.address);
-    setEditAvatar(barber.avatarUrl ?? '');
-    setIsEditing(false);
+    setEditName(barber.fullName); setEditBio(barber.bio); setEditAddress(barber.location.address); setEditAvatar(barber.avatarUrl ?? ''); setIsEditing(false);
   }, [barber]);
 
   const handleLogout = useCallback(() => {
@@ -916,6 +803,10 @@ function ProfileTab({ barber, onUpdateProfile, isSaving }: {
     ]);
   }, [barberLogout, router]);
 
+  if (subView === 'services') {
+    return <ServicesView barber={barber} onUpdateServices={onUpdateServices} onBack={() => setSubView('main')} />;
+  }
+
   const initials = barber.fullName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
 
   if (isEditing) {
@@ -925,72 +816,29 @@ function ProfileTab({ barber, onUpdateProfile, isSaving }: {
           <View style={styles.editHeader}>
             <Text style={styles.tabHeaderTitle}>Edit Profile</Text>
             <View style={styles.editHeaderActions}>
-              <Pressable onPress={handleCancel} style={styles.editCancelBtn}>
-                <X color={Colors.textSecondary} size={18} />
-              </Pressable>
+              <Pressable onPress={handleCancel} style={styles.editCancelBtn}><X color={Colors.textSecondary} size={18} /></Pressable>
               <Pressable onPress={handleSave} style={styles.editSaveBtn} disabled={isSaving}>
-                {isSaving ? (
-                  <ActivityIndicator color={Colors.black} size="small" />
-                ) : (
-                  <>
-                    <Save color={Colors.black} size={16} />
-                    <Text style={styles.editSaveBtnText}>Save</Text>
-                  </>
-                )}
+                {isSaving ? <ActivityIndicator color={Colors.black} size="small" /> : <><Save color={Colors.black} size={16} /><Text style={styles.editSaveBtnText}>Save</Text></>}
               </Pressable>
             </View>
           </View>
-
           <View style={styles.editSection}>
             <Text style={styles.editLabel}>FULL NAME</Text>
-            <TextInput
-              style={styles.editInput}
-              value={editName}
-              onChangeText={setEditName}
-              placeholder="Your name"
-              placeholderTextColor={Colors.textMuted}
-              testID="edit-barber-name"
-            />
+            <TextInput style={styles.editInput} value={editName} onChangeText={setEditName} placeholder="Your name" placeholderTextColor={Colors.textMuted} testID="edit-barber-name" />
           </View>
-
           <View style={styles.editSection}>
             <Text style={styles.editLabel}>AVATAR URL</Text>
-            <TextInput
-              style={styles.editInput}
-              value={editAvatar}
-              onChangeText={setEditAvatar}
-              placeholder="https://example.com/photo.jpg"
-              placeholderTextColor={Colors.textMuted}
-              autoCapitalize="none"
-              testID="edit-barber-avatar"
-            />
+            <TextInput style={styles.editInput} value={editAvatar} onChangeText={setEditAvatar} placeholder="https://example.com/photo.jpg" placeholderTextColor={Colors.textMuted} autoCapitalize="none" testID="edit-barber-avatar" />
           </View>
-
           <View style={styles.editSection}>
             <Text style={styles.editLabel}>BIO</Text>
-            <TextInput
-              style={[styles.editInput, styles.editBioInput]}
-              value={editBio}
-              onChangeText={setEditBio}
-              placeholder="Tell clients about yourself..."
-              placeholderTextColor={Colors.textMuted}
-              multiline
-              testID="edit-barber-bio"
-            />
+            <TextInput style={[styles.editInput, styles.editBioInput]} value={editBio} onChangeText={setEditBio} placeholder="Tell clients about yourself..." placeholderTextColor={Colors.textMuted} multiline testID="edit-barber-bio" />
           </View>
-
           <View style={styles.editSection}>
             <Text style={styles.editLabel}>LOCATION</Text>
             <View style={styles.editLocationRow}>
               <MapPin color={Colors.teal} size={16} />
-              <TextInput
-                style={[styles.editInput, { flex: 1 }]}
-                value={editAddress}
-                onChangeText={setEditAddress}
-                placeholder="123 Main St, City, State ZIP"
-                placeholderTextColor={Colors.textMuted}
-                testID="edit-barber-address"
-              />
+              <TextInput style={[styles.editInput, { flex: 1 }]} value={editAddress} onChangeText={setEditAddress} placeholder="123 Main St, City, State ZIP" placeholderTextColor={Colors.textMuted} testID="edit-barber-address" />
             </View>
           </View>
         </ScrollView>
@@ -1005,16 +853,10 @@ function ProfileTab({ barber, onUpdateProfile, isSaving }: {
           {barber.avatarUrl ? (
             <Image source={{ uri: barber.avatarUrl }} style={styles.avatar} contentFit="cover" />
           ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.initialsText}>{initials}</Text>
-            </View>
+            <View style={styles.avatarPlaceholder}><Text style={styles.initialsText}>{initials}</Text></View>
           )}
           <View style={styles.cameraIconBadge}>
-            {isPickingImage ? (
-              <ActivityIndicator size="small" color={Colors.black} />
-            ) : (
-              <Camera color={Colors.black} size={12} />
-            )}
+            {isPickingImage ? <ActivityIndicator size="small" color={Colors.black} /> : <Camera color={Colors.black} size={12} />}
           </View>
         </Pressable>
         <Text style={styles.profileName}>{barber.fullName}</Text>
@@ -1024,15 +866,24 @@ function ProfileTab({ barber, onUpdateProfile, isSaving }: {
           <Text style={styles.locationText}>{barber.location.address}</Text>
         </View>
         <Text style={styles.profileBio}>{barber.bio}</Text>
-        <Pressable
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setIsEditing(true); }}
-          style={styles.editProfileBtn}
-          testID="edit-profile-btn"
-        >
+        <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setIsEditing(true); }} style={styles.editProfileBtn} testID="edit-profile-btn">
           <Pencil color={Colors.teal} size={16} />
           <Text style={styles.editProfileBtnText}>Edit Profile</Text>
         </Pressable>
       </View>
+
+      <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSubView('services'); }} style={styles.servicesMenuBtn} testID="manage-services-btn">
+        <View style={styles.servicesMenuLeft}>
+          <View style={styles.servicesMenuIcon}>
+            <Settings color={Colors.teal} size={18} />
+          </View>
+          <View>
+            <Text style={styles.servicesMenuTitle}>Manage Services</Text>
+            <Text style={styles.servicesMenuSub}>{barber.services.length} services · Tap to edit</Text>
+          </View>
+        </View>
+        <ChevronRight color={Colors.textMuted} size={18} />
+      </Pressable>
 
       <View style={styles.profileStatsRow}>
         <View style={styles.profileStatCard}>
@@ -1040,9 +891,7 @@ function ProfileTab({ barber, onUpdateProfile, isSaving }: {
           <Text style={styles.profileStatLabel}>Services</Text>
         </View>
         <View style={styles.profileStatCard}>
-          <Text style={styles.profileStatNum}>
-            {new Date(barber.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-          </Text>
+          <Text style={styles.profileStatNum}>{new Date(barber.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</Text>
           <Text style={styles.profileStatLabel}>Member since</Text>
         </View>
       </View>
@@ -1060,12 +909,11 @@ export default function BarberDashboardScreen() {
   const router = useRouter();
   const { barberAuth, updateBarberProfile, updateBarberServices, isUpdatingProfile, isUpdatingServices } = useBarbers();
   const barber = barberAuth.barber;
-  const [activeTab, setActiveTab] = useState<DashboardTab>('services');
+  const [activeTab, setActiveTab] = useState<DashboardTab>('appointments');
 
   const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
 
-  const tabs: { key: DashboardTab; label: string; icon: typeof Scissors }[] = useMemo(() => [
-    { key: 'services', label: 'Services', icon: Scissors },
+  const tabs: { key: DashboardTab; label: string; icon: typeof Calendar }[] = useMemo(() => [
     { key: 'appointments', label: 'Bookings', icon: Calendar },
     { key: 'profile', label: 'Profile', icon: User },
   ], []);
@@ -1095,17 +943,15 @@ export default function BarberDashboardScreen() {
     return (
       <View style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Not logged in as barber</Text>
-        </View>
+        <View style={styles.errorContainer}><Text style={styles.errorText}>Not logged in as barber</Text></View>
       </View>
     );
   }
 
-  const tabWidth = (SCREEN_WIDTH - 40) / 3;
+  const tabWidth = (SCREEN_WIDTH - 40) / 2;
   const translateX = tabIndicatorAnim.interpolate({
-    inputRange: [0, 1, 2],
-    outputRange: [0, tabWidth, tabWidth * 2],
+    inputRange: [0, 1],
+    outputRange: [0, tabWidth],
   });
 
   return (
@@ -1137,15 +983,8 @@ export default function BarberDashboardScreen() {
       </View>
 
       <View style={styles.tabContainer}>
-        {activeTab === 'services' && (
-          <ServicesTab barber={barber} onUpdateServices={handleUpdateServices} />
-        )}
-        {activeTab === 'appointments' && (
-          <AppointmentsTab barber={barber} />
-        )}
-        {activeTab === 'profile' && (
-          <ProfileTab barber={barber} onUpdateProfile={handleUpdateProfile} isSaving={isUpdatingProfile} />
-        )}
+        {activeTab === 'appointments' && <AppointmentsTab barber={barber} />}
+        {activeTab === 'profile' && <ProfileTab barber={barber} onUpdateProfile={handleUpdateProfile} onUpdateServices={handleUpdateServices} isSaving={isUpdatingProfile} />}
       </View>
     </View>
   );
@@ -1166,335 +1005,74 @@ const imgStyles = StyleSheet.create({
 });
 
 const calStyles = StyleSheet.create({
-  monthNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    paddingHorizontal: 4,
-  },
-  monthNavBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  monthTitle: {
-    fontSize: 17,
-    fontWeight: '700' as const,
-    color: Colors.text,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  dayHeader: {
-    width: `${100 / 7}%` as any,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  dayHeaderText: {
-    fontSize: 11,
-    fontWeight: '600' as const,
-    color: Colors.textMuted,
-    letterSpacing: 0.5,
-  },
-  dayCell: {
-    width: `${100 / 7}%` as any,
-    alignItems: 'center',
-    paddingVertical: 6,
-    minHeight: 52,
-  },
-  dayCellToday: {
-    backgroundColor: Colors.surface,
-    borderRadius: 10,
-  },
-  dayCellSelected: {
-    backgroundColor: Colors.tealMuted,
-    borderRadius: 10,
-  },
-  dayNum: {
-    fontSize: 14,
-    fontWeight: '500' as const,
-    color: Colors.textSecondary,
-  },
-  dayNumToday: {
-    color: Colors.accent,
-    fontWeight: '700' as const,
-  },
-  dayNumSelected: {
-    color: Colors.teal,
-    fontWeight: '700' as const,
-  },
-  countBadge: {
-    marginTop: 3,
-    backgroundColor: Colors.accentMuted,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 20,
-    alignItems: 'center',
-  },
-  countBadgeSelected: {
-    backgroundColor: Colors.teal,
-  },
-  countText: {
-    fontSize: 9,
-    fontWeight: '700' as const,
-    color: Colors.accent,
-  },
-  countTextSelected: {
-    color: Colors.black,
-  },
-  selectedSection: {
-    marginTop: 20,
-  },
-  selectedTitle: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: Colors.textSecondary,
-    marginBottom: 12,
-  },
+  monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, paddingHorizontal: 4 },
+  monthNavBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
+  monthTitle: { fontSize: 17, fontWeight: '700' as const, color: Colors.text },
+  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  dayHeader: { width: `${100 / 7}%` as any, alignItems: 'center', paddingVertical: 8 },
+  dayHeaderText: { fontSize: 11, fontWeight: '600' as const, color: Colors.textMuted, letterSpacing: 0.5 },
+  dayCell: { width: `${100 / 7}%` as any, alignItems: 'center', paddingVertical: 6, minHeight: 52 },
+  dayCellToday: { backgroundColor: Colors.surface, borderRadius: 10 },
+  dayCellSelected: { backgroundColor: Colors.tealMuted, borderRadius: 10 },
+  dayNum: { fontSize: 14, fontWeight: '500' as const, color: Colors.textSecondary },
+  dayNumToday: { color: Colors.accent, fontWeight: '700' as const },
+  dayNumSelected: { color: Colors.teal, fontWeight: '700' as const },
+  countBadge: { marginTop: 3, backgroundColor: Colors.accentMuted, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, minWidth: 20, alignItems: 'center' },
+  countBadgeSelected: { backgroundColor: Colors.teal },
+  countText: { fontSize: 9, fontWeight: '700' as const, color: Colors.accent },
+  countTextSelected: { color: Colors.black },
+  selectedSection: { marginTop: 20 },
+  selectedTitle: { fontSize: 13, fontWeight: '600' as const, color: Colors.textSecondary, marginBottom: 12 },
 });
 
 const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'flex-end',
-  },
-  keyboardView: {
-    justifyContent: 'flex-end',
-  },
-  container: {
-    backgroundColor: Colors.background,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '80%',
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: Colors.text,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  listScroll: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    maxHeight: 400,
-  },
-  haircutOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: Colors.surface,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  haircutIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: Colors.tealMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  haircutOptionName: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: Colors.text,
-  },
-  haircutOptionDesc: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  formScroll: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  formField: {
-    marginBottom: 16,
-  },
-  formLabel: {
-    fontSize: 10,
-    fontWeight: '700' as const,
-    color: Colors.textMuted,
-    letterSpacing: 1.2,
-    marginBottom: 8,
-  },
-  formInput: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: Colors.text,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  formInputPrice: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: Colors.text,
-    paddingVertical: 12,
-  },
-  selectedPreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: Colors.tealMuted,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.tealBorder,
-  },
-  selectedName: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: Colors.teal,
-  },
-  formActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 8,
-  },
-  backBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  backBtnText: {
-    fontSize: 14,
-    fontWeight: '600' as const,
-    color: Colors.textSecondary,
-  },
-  addBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: Colors.teal,
-  },
-  addBtnText: {
-    fontSize: 14,
-    fontWeight: '700' as const,
-    color: Colors.black,
-  },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  keyboardView: { justifyContent: 'flex-end' },
+  container: { backgroundColor: Colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', paddingBottom: 40 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  title: { fontSize: 18, fontWeight: '700' as const, color: Colors.text },
+  closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' },
+  listScroll: { paddingHorizontal: 20, paddingTop: 12, maxHeight: 400 },
+  haircutOption: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12, backgroundColor: Colors.surface, marginBottom: 8, borderWidth: 1, borderColor: Colors.border },
+  haircutIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.tealMuted, alignItems: 'center', justifyContent: 'center' },
+  haircutOptionName: { fontSize: 14, fontWeight: '600' as const, color: Colors.text },
+  haircutOptionDesc: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
+  formScroll: { paddingHorizontal: 20, paddingTop: 16 },
+  formField: { marginBottom: 16 },
+  formLabel: { fontSize: 10, fontWeight: '700' as const, color: Colors.textMuted, letterSpacing: 1.2, marginBottom: 8 },
+  formInput: { backgroundColor: Colors.surface, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: Colors.text, borderWidth: 1, borderColor: Colors.border },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.surface, borderRadius: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: Colors.border },
+  formInputPrice: { flex: 1, fontSize: 18, fontWeight: '700' as const, color: Colors.text, paddingVertical: 12 },
+  selectedPreview: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.tealMuted, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, marginBottom: 16, borderWidth: 1, borderColor: Colors.tealBorder },
+  selectedName: { fontSize: 15, fontWeight: '600' as const, color: Colors.teal },
+  formActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  backBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: 12, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
+  backBtnText: { fontSize: 14, fontWeight: '600' as const, color: Colors.textSecondary },
+  addBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: 12, backgroundColor: Colors.teal },
+  addBtnText: { fontSize: 14, fontWeight: '700' as const, color: Colors.black },
 });
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText: { color: Colors.error, fontSize: 16, textAlign: 'center' },
-
   headerTitle: { fontSize: 20, fontWeight: '800' as const, color: Colors.text, letterSpacing: 1.5 },
   headerTitleAccent: { color: Colors.teal, fontWeight: '800' as const },
-
-  tabBar: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    position: 'relative',
-  },
-  tabIndicator: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    bottom: 4,
-    backgroundColor: Colors.card,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: Colors.tealBorder,
-  },
-  tabItem: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    zIndex: 1,
-  },
+  tabBar: { flexDirection: 'row', marginHorizontal: 20, backgroundColor: Colors.surface, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: Colors.border, position: 'relative' },
+  tabIndicator: { position: 'absolute', top: 4, left: 4, bottom: 4, backgroundColor: Colors.card, borderRadius: 11, borderWidth: 1, borderColor: Colors.tealBorder },
+  tabItem: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, zIndex: 1 },
   tabLabel: { fontSize: 12, fontWeight: '600' as const, color: Colors.textMuted },
   tabLabelActive: { color: Colors.teal },
-
   tabContainer: { flex: 1 },
   tabContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40 },
-
-  tabHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  tabHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   tabHeaderTitle: { fontSize: 22, fontWeight: '700' as const, color: Colors.text },
   tabHeaderSub: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
-
   tapHint: { fontSize: 11, color: Colors.textMuted, marginBottom: 16, fontStyle: 'italic' as const },
-
-  addServiceBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.teal,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
+  servicesHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
+  servicesBackBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
+  addServiceBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.teal, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
   addServiceBtnText: { color: Colors.black, fontSize: 13, fontWeight: '700' as const },
-
-  serviceCountBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.tealMuted, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
-  serviceCountText: { color: Colors.teal, fontSize: 16, fontWeight: '700' as const },
-
   servicesList: { gap: 10 },
   serviceViewCard: { backgroundColor: Colors.surface, borderRadius: 14, padding: 16, borderWidth: 1, borderColor: Colors.border },
   serviceViewTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -1505,20 +1083,10 @@ const styles = StyleSheet.create({
   serviceViewDescEmpty: { color: Colors.textMuted, fontSize: 12, marginTop: 3, fontStyle: 'italic' as const },
   serviceViewRight: { alignItems: 'flex-end', gap: 6 },
   serviceViewRate: { color: Colors.success, fontSize: 18, fontWeight: '700' as const },
-
   serviceEditCard: { backgroundColor: Colors.surface, borderRadius: 14, padding: 16, borderWidth: 1, borderColor: Colors.tealBorder },
   serviceEditHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   serviceEditName: { color: Colors.text, fontSize: 16, fontWeight: '700' as const },
-  removeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: Colors.errorMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.errorBorder,
-  },
+  removeBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.errorMuted, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.errorBorder },
   serviceEditRow: { marginBottom: 12 },
   serviceEditLabel: { fontSize: 9, fontWeight: '700' as const, color: Colors.textMuted, letterSpacing: 1.2, marginBottom: 6 },
   serviceEditInputWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.card, borderRadius: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: Colors.border },
@@ -1529,31 +1097,9 @@ const styles = StyleSheet.create({
   serviceEditCancelText: { color: Colors.textSecondary, fontSize: 13, fontWeight: '600' as const },
   serviceEditSaveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 10, backgroundColor: Colors.teal },
   serviceEditSaveText: { color: Colors.black, fontSize: 13, fontWeight: '700' as const },
-
-  viewToggle: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    borderRadius: 10,
-    padding: 3,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  viewToggleBtn: {
-    width: 40,
-    height: 36,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  viewToggleBtnActive: {
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.tealBorder,
-  },
-
-  appointmentCountBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.accentMuted, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
-  appointmentCountText: { color: Colors.accent, fontSize: 16, fontWeight: '700' as const },
-
+  viewToggle: { flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: 10, padding: 3, borderWidth: 1, borderColor: Colors.border },
+  viewToggleBtn: { width: 40, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  viewToggleBtnActive: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.tealBorder },
   notifSection: { marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   sectionTitle: { fontSize: 10, fontWeight: '700' as const, color: Colors.textMuted, letterSpacing: 1.5, marginBottom: 10, marginLeft: 4 },
@@ -1572,7 +1118,6 @@ const styles = StyleSheet.create({
   unreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.accent },
   notifMessage: { color: Colors.textSecondary, fontSize: 12, lineHeight: 17, marginBottom: 4 },
   notifTime: { color: Colors.textMuted, fontSize: 10 },
-
   appointmentsList: { gap: 10 },
   appointmentCard: { backgroundColor: Colors.surface, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, overflow: 'hidden' },
   appointmentCardInner: { padding: 14 },
@@ -1582,15 +1127,17 @@ const styles = StyleSheet.create({
   appointmentClient: { color: Colors.text, fontSize: 14, fontWeight: '600' as const },
   hasImagesBadge: { width: 22, height: 22, borderRadius: 6, backgroundColor: Colors.tealMuted, alignItems: 'center', justifyContent: 'center' },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  statusConfirmed: { backgroundColor: Colors.successMuted },
-  statusPending: { backgroundColor: Colors.accentMuted },
   statusText: { fontSize: 10, fontWeight: '700' as const, textTransform: 'capitalize' as const },
-  statusTextConfirmed: { color: Colors.success },
-  statusTextPending: { color: Colors.accent },
+  moreBtn: { width: 28, height: 28, borderRadius: 8, backgroundColor: Colors.card, alignItems: 'center', justifyContent: 'center' },
   appointmentDetails: { marginLeft: 38 },
   appointmentService: { color: Colors.textSecondary, fontSize: 13, fontWeight: '500' as const },
   appointmentTime: { color: Colors.textMuted, fontSize: 11, marginTop: 2 },
   appointmentRate: { color: Colors.success, fontSize: 13, fontWeight: '700' as const, marginTop: 4 },
+  actionRow: { flexDirection: 'row', gap: 8, marginTop: 12, marginLeft: 38, paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.border },
+  actionBtnComplete: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.teal },
+  actionBtnCancel: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.errorMuted, borderWidth: 1, borderColor: Colors.errorBorder },
+  actionBtnDelete: { width: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: Colors.errorMuted, borderWidth: 1, borderColor: Colors.errorBorder },
+  actionBtnText: { fontSize: 12, fontWeight: '700' as const, color: Colors.black },
   expandHint: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.border },
   expandHintText: { color: Colors.textMuted, fontSize: 11, fontWeight: '500' as const },
   imageSection: { backgroundColor: Colors.card },
@@ -1601,25 +1148,12 @@ const styles = StyleSheet.create({
   emptyCard: { backgroundColor: Colors.surface, borderRadius: 16, padding: 40, alignItems: 'center', borderWidth: 1, borderColor: Colors.border, gap: 8 },
   emptyText: { color: Colors.text, fontSize: 16, fontWeight: '600' as const },
   emptySubtext: { color: Colors.textMuted, fontSize: 12 },
-
   profileCard: { backgroundColor: Colors.surface, borderRadius: 20, padding: 28, borderWidth: 1, borderColor: Colors.border, alignItems: 'center' },
   avatarTouchable: { position: 'relative' },
   avatar: { width: 88, height: 88, borderRadius: 44, borderWidth: 2, borderColor: Colors.teal },
   avatarPlaceholder: { width: 88, height: 88, borderRadius: 44, backgroundColor: Colors.card, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: Colors.teal },
   initialsText: { fontSize: 28, fontWeight: '700' as const, color: Colors.teal },
-  cameraIconBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.teal,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.background,
-  },
+  cameraIconBadge: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, backgroundColor: Colors.teal, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: Colors.background },
   profileName: { fontSize: 22, fontWeight: '700' as const, color: Colors.text, marginTop: 14 },
   profileEmail: { fontSize: 13, color: Colors.textMuted, marginTop: 4 },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
@@ -1627,12 +1161,15 @@ const styles = StyleSheet.create({
   profileBio: { color: Colors.textSecondary, fontSize: 13, textAlign: 'center', marginTop: 12, lineHeight: 19, paddingHorizontal: 12 },
   editProfileBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20, backgroundColor: Colors.tealMuted, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: Colors.tealBorder },
   editProfileBtnText: { color: Colors.teal, fontSize: 14, fontWeight: '600' as const },
-
+  servicesMenuBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.surface, borderRadius: 16, padding: 16, marginTop: 16, borderWidth: 1, borderColor: Colors.border },
+  servicesMenuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  servicesMenuIcon: { width: 42, height: 42, borderRadius: 12, backgroundColor: Colors.tealMuted, alignItems: 'center', justifyContent: 'center' },
+  servicesMenuTitle: { fontSize: 15, fontWeight: '600' as const, color: Colors.text },
+  servicesMenuSub: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
   profileStatsRow: { flexDirection: 'row', gap: 10, marginTop: 16, marginBottom: 24 },
   profileStatCard: { flex: 1, backgroundColor: Colors.surface, borderRadius: 14, padding: 18, alignItems: 'center', borderWidth: 1, borderColor: Colors.border },
   profileStatNum: { fontSize: 17, fontWeight: '700' as const, color: Colors.text },
   profileStatLabel: { fontSize: 11, color: Colors.textMuted, marginTop: 4, fontWeight: '500' as const },
-
   editHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
   editHeaderActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   editCancelBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
@@ -1643,7 +1180,6 @@ const styles = StyleSheet.create({
   editInput: { backgroundColor: Colors.surface, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: Colors.text, borderWidth: 1, borderColor: Colors.border },
   editBioInput: { minHeight: 100, textAlignVertical: 'top' as const, paddingTop: 14 },
   editLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-
   logoutBtn: { backgroundColor: Colors.errorMuted, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderColor: Colors.errorBorder },
   logoutText: { color: Colors.error, fontSize: 15, fontWeight: '600' as const },
   versionText: { color: Colors.textDim, fontSize: 11, textAlign: 'center', marginTop: 20 },

@@ -101,13 +101,14 @@ async function saveBase64ToFile(base64Uri: string, fileName: string): Promise<st
 }
 
 export default function TryOnScreen() {
-  const { haircutId } = useLocalSearchParams<{ haircutId: string }>();
+  const { haircutId, editingLook } = useLocalSearchParams<{ haircutId: string; editingLook?: string }>();
   const router = useRouter();
   const { saveLook } = useSavedLooks();
   const scrollRef = useRef<ScrollView>(null);
 
   const haircut = HAIRCUTS.find((h) => h.id === haircutId);
   const isCustom = haircutId === 'custom';
+  const isEditingLook = editingLook === 'true';
 
   const [step, setStep] = useState<TryOnStep>(haircutId === 'custom' ? 'describe-custom' : 'select-photo');
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
@@ -119,8 +120,46 @@ export default function TryOnScreen() {
   const [generatedCount, setGeneratedCount] = useState(0);
   const [currentPrompt, setCurrentPrompt] = useState('');
   const [isSavingToDevice, setIsSavingToDevice] = useState(false);
+  const [editingLookId, setEditingLookId] = useState<string | null>(null);
 
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  useEffect(() => {
+    if (isEditingLook) {
+      AsyncStorage.getItem('editing_look_data')
+        .then((raw) => {
+          if (raw) {
+            const data = JSON.parse(raw);
+            console.log('[TryOn] Loading saved look for editing:', data.lookId);
+            setEditingLookId(data.lookId ?? null);
+            setUserPhoto(data.originalPhoto ?? null);
+            if (data.anglePhotos && data.anglePhotos.length > 0) {
+              const angleLabels = ['Front View', 'Left Side', 'Right Side', 'Back View'];
+              const shortLabels = ['Front', 'Left', 'Right', 'Back'];
+              const angles = [0, -90, 90, 180];
+              const views: AngleView[] = data.anglePhotos.map((img: string, i: number) => ({
+                label: angleLabels[i] ?? `View ${i + 1}`,
+                shortLabel: shortLabels[i] ?? `V${i + 1}`,
+                image: img,
+                angle: angles[i] ?? 0,
+              }));
+              setAngleViews(views);
+              setStep('result');
+              setChatMessages([{
+                id: 'welcome-edit',
+                role: 'assistant',
+                text: `Welcome back! Your ${data.haircutName ?? 'look'} is loaded. Want to make any adjustments?\n\n• "Make the top shorter"\n• "Fade the sides more"\n• "Add more texture"`,
+              }]);
+            } else if (data.resultPhoto) {
+              setAngleViews([{ label: 'Front View', shortLabel: 'Front', image: data.resultPhoto, angle: 0 }]);
+              setStep('result');
+            }
+            AsyncStorage.removeItem('editing_look_data').catch(() => {});
+          }
+        })
+        .catch((err) => console.error('[TryOn] Error loading edit data:', err));
+    }
+  }, [isEditingLook]);
+
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);  
   const [chatInput, setChatInput] = useState('');
   const [isRegenerating, setIsRegenerating] = useState(false);
 

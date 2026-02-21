@@ -85,7 +85,7 @@ export const HAIRCUTS: HaircutStyle[] = [
     name: 'Taper Fade',
     description: 'Gradual taper with natural blend',
     category: 'Fade',
-    image: 'https://images.unsplash.com/photo-1596473884778-d63aa9d5f55c?w=400&h=500&fit=crop',
+    image: 'https://images.unsplash.com/photo-1534030347209-467a5b0ad3e6?w=400&h=500&fit=crop',
     prompt: 'Apply a taper fade haircut, gradual natural taper from longer to shorter around the ears and neckline, clean and subtle taper fade',
   },
   {
@@ -165,7 +165,7 @@ export const HAIRCUTS: HaircutStyle[] = [
     name: 'Burst Fade',
     description: 'Rounded fade behind the ears',
     category: 'Trending',
-    image: 'https://images.unsplash.com/photo-1621607512022-6aecc52cedbf?w=400&h=500&fit=crop',
+    image: 'https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?w=400&h=500&fit=crop',
     prompt: 'Apply a burst fade haircut, rounded fade pattern radiating from behind the ear, longer curly or textured hair on top with clean burst fade on sides',
   },
   {
@@ -261,7 +261,7 @@ export const HAIRCUTS: HaircutStyle[] = [
     name: 'Buzz + Stubble',
     description: 'Buzz cut paired with heavy stubble',
     category: 'Beard Combo',
-    image: 'https://images.unsplash.com/photo-1584536778449-d240b3a38fed?w=400&h=500&fit=crop',
+    image: 'https://images.unsplash.com/photo-1581803118522-7b72a50f7e9f?w=400&h=500&fit=crop',
     prompt: 'Apply a buzz cut with heavy stubble beard combo, very short buzz cut on head with well-groomed heavy stubble facial hair, rugged masculine look',
   },
   {

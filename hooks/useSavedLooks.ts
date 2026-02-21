@@ -57,6 +57,18 @@ export const [SavedLooksProvider, useSavedLooks] = createContextHook(() => {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (updatedLook: SavedLook) => {
+      const updated = looks.map((l) => (l.id === updatedLook.id ? updatedLook : l));
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    },
+    onSuccess: (updated) => {
+      setLooks(updated);
+      queryClient.invalidateQueries({ queryKey: ['saved-looks'] });
+    },
+  });
+
   const saveLook = useCallback(
     (look: SavedLook) => {
       saveMutation.mutate(look);
@@ -71,10 +83,18 @@ export const [SavedLooksProvider, useSavedLooks] = createContextHook(() => {
     [deleteMutation]
   );
 
+  const updateLook = useCallback(
+    (look: SavedLook) => {
+      updateMutation.mutate(look);
+    },
+    [updateMutation]
+  );
+
   return {
     looks,
     saveLook,
     deleteLook,
+    updateLook,
     isLoading: looksQuery.isLoading,
   };
 });

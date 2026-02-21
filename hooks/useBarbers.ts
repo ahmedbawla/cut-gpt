@@ -295,6 +295,53 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
         a.id === appointmentId ? { ...a, status: 'cancelled' as const } : a
       );
       await AsyncStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(updated));
+
+      const apt = appointments.find((a) => a.id === appointmentId);
+      if (apt) {
+        const notification: BarberNotification = {
+          id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+          barberId: apt.barberId,
+          type: 'cancellation',
+          title: 'Appointment Cancelled',
+          message: `${apt.customerName} cancelled their ${apt.haircutName} appointment on ${apt.date} at ${apt.time}`,
+          appointmentId: apt.id,
+          read: false,
+          createdAt: new Date().toISOString(),
+        };
+        const updatedNotifs = [notification, ...notifications];
+        await AsyncStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updatedNotifs));
+        setNotifications(updatedNotifs);
+      }
+
+      return updated;
+    },
+    onSuccess: (updated) => {
+      setAppointments(updated);
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['barber-notifications'] });
+    },
+  });
+
+  const deleteAppointmentMutation = useMutation({
+    mutationFn: async (appointmentId: string) => {
+      const updated = appointments.filter((a) => a.id !== appointmentId);
+      await AsyncStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(updated));
+      console.log('[Appointments] Deleted:', appointmentId);
+      return updated;
+    },
+    onSuccess: (updated) => {
+      setAppointments(updated);
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
+
+  const updateAppointmentMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Pick<Appointment, 'date' | 'time' | 'status'>> }) => {
+      const updated = appointments.map((a) =>
+        a.id === id ? { ...a, ...updates } : a
+      );
+      await AsyncStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(updated));
+      console.log('[Appointments] Updated:', id, updates);
       return updated;
     },
     onSuccess: (updated) => {
@@ -331,6 +378,17 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
   const cancelAppointment = useCallback(
     (id: string) => cancelAppointmentMutation.mutateAsync(id),
     [cancelAppointmentMutation]
+  );
+
+  const deleteAppointment = useCallback(
+    (id: string) => deleteAppointmentMutation.mutateAsync(id),
+    [deleteAppointmentMutation]
+  );
+
+  const updateAppointment = useCallback(
+    (id: string, updates: Partial<Pick<Appointment, 'date' | 'time' | 'status'>>) =>
+      updateAppointmentMutation.mutateAsync({ id, updates }),
+    [updateAppointmentMutation]
   );
 
   const updateBarberProfile = useCallback(
@@ -412,6 +470,8 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
     barberLogout,
     bookAppointment,
     cancelAppointment,
+    deleteAppointment,
+    updateAppointment,
     getBarberAppointments,
     getCustomerAppointments,
     getBarberNotifications,
