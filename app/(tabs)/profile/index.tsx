@@ -25,11 +25,13 @@ import {
   Scissors,
   ChevronRight,
 } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedLooks } from '@/hooks/useSavedLooks';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { user, logout, updateProfile } = useAuth();
   const { looks } = useSavedLooks();
   const [isEditingName, setIsEditingName] = useState(false);
@@ -90,10 +92,13 @@ export default function ProfileScreen() {
       {
         text: 'Sign Out',
         style: 'destructive',
-        onPress: () => logout(),
+        onPress: () => {
+          logout();
+          router.replace('/login' as any);
+        },
       },
     ]);
-  }, [logout]);
+  }, [logout, router]);
 
   const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {
@@ -120,7 +125,17 @@ export default function ProfileScreen() {
       })
     : '';
 
-  const initials = (user?.fullName ?? '')
+  if (!user) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <ActivityIndicator color={Colors.accent} size="large" />
+        </View>
+      </View>
+    );
+  }
+
+  const initials = (user.fullName ?? '')
     .split(' ')
     .map((n) => n[0])
     .join('')
@@ -136,7 +151,7 @@ export default function ProfileScreen() {
       <View style={styles.profileCard}>
         <View style={styles.avatarSection}>
           <Pressable onPress={handlePickAvatar} style={styles.avatarWrap}>
-            {user?.avatarUrl ? (
+            {user.avatarUrl ? (
               <Image
                 source={{ uri: user.avatarUrl }}
                 style={styles.avatar}
@@ -176,7 +191,7 @@ export default function ProfileScreen() {
               <Pressable
                 onPress={() => {
                   setIsEditingName(false);
-                  setEditName(user?.fullName ?? '');
+                  setEditName(user.fullName ?? '');
                 }}
                 style={styles.editActionBtn}
                 hitSlop={8}
@@ -192,11 +207,11 @@ export default function ProfileScreen() {
               }}
               style={styles.nameRow}
             >
-              <Text style={styles.userName}>{user?.fullName}</Text>
+              <Text style={styles.userName}>{user.fullName}</Text>
               <Pencil color={Colors.textMuted} size={13} />
             </Pressable>
           )}
-          <Text style={styles.userEmail}>{user?.email}</Text>
+          <Text style={styles.userEmail}>{user.email}</Text>
         </View>
       </View>
 
@@ -228,7 +243,7 @@ export default function ProfileScreen() {
               </View>
               <View>
                 <Text style={styles.menuItemTitle}>Full Name</Text>
-                <Text style={styles.menuItemValue}>{user?.fullName}</Text>
+                <Text style={styles.menuItemValue}>{user.fullName}</Text>
               </View>
             </View>
             <ChevronRight color={Colors.textDim} size={16} />
@@ -243,7 +258,7 @@ export default function ProfileScreen() {
               </View>
               <View>
                 <Text style={styles.menuItemTitle}>Email</Text>
-                <Text style={styles.menuItemValue}>{user?.email}</Text>
+                <Text style={styles.menuItemValue}>{user.email}</Text>
               </View>
             </View>
           </View>
