@@ -2,6 +2,7 @@ export interface BarberService {
   haircutId: string;
   haircutName: string;
   rate: number;
+  description?: string;
 }
 
 export interface BarberLocation {
@@ -63,13 +64,13 @@ export const TEST_BARBER: BarberProfile = {
     longitude: -73.7254,
   },
   services: [
-    { haircutId: 'high-fade', haircutName: 'High Fade', rate: 35 },
-    { haircutId: 'mid-fade', haircutName: 'Mid Fade', rate: 30 },
-    { haircutId: 'skin-fade', haircutName: 'Skin Fade', rate: 40 },
-    { haircutId: 'buzz-cut', haircutName: 'Buzz Cut', rate: 20 },
-    { haircutId: 'taper-fade', haircutName: 'Taper Fade', rate: 30 },
-    { haircutId: 'edgar-cut', haircutName: 'Edgar Cut', rate: 35 },
-    { haircutId: 'crew-cut', haircutName: 'Crew Cut', rate: 25 },
+    { haircutId: 'high-fade', haircutName: 'High Fade', rate: 35, description: 'Sharp high fade with textured top' },
+    { haircutId: 'mid-fade', haircutName: 'Mid Fade', rate: 30, description: 'Balanced mid-level fade transition' },
+    { haircutId: 'skin-fade', haircutName: 'Skin Fade', rate: 40, description: 'Clean bald fade to skin on sides' },
+    { haircutId: 'buzz-cut', haircutName: 'Buzz Cut', rate: 20, description: 'Clean and minimal all-over short cut' },
+    { haircutId: 'taper-fade', haircutName: 'Taper Fade', rate: 30, description: 'Gradual taper with natural blend' },
+    { haircutId: 'edgar-cut', haircutName: 'Edgar Cut', rate: 35, description: 'Sharp straight fringe with high fade' },
+    { haircutId: 'crew-cut', haircutName: 'Crew Cut', rate: 25, description: 'Short sides with slightly longer top' },
   ],
   createdAt: '2024-01-15T00:00:00.000Z',
 };

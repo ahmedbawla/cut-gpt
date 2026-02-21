@@ -225,6 +225,70 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
     },
   });
 
+  const updateBarberProfileMutation = useMutation({
+    mutationFn: async (updates: Partial<Pick<BarberProfile, 'fullName' | 'bio' | 'avatarUrl'>> & { location?: BarberLocation }) => {
+      if (!barberAuth.barber) throw new Error('Not authenticated as barber');
+      const updatedBarber: BarberProfile = { ...barberAuth.barber, ...updates };
+      const newState: BarberAuthState = { isAuthenticated: true, barber: updatedBarber };
+      await AsyncStorage.setItem(BARBER_AUTH_KEY, JSON.stringify(newState));
+
+      const storedBarbers = await AsyncStorage.getItem(BARBERS_KEY);
+      const barberList: BarberProfile[] = storedBarbers ? JSON.parse(storedBarbers) : [];
+      const idx = barberList.findIndex((b) => b.id === updatedBarber.id);
+      if (idx >= 0) {
+        barberList[idx] = updatedBarber;
+        await AsyncStorage.setItem(BARBERS_KEY, JSON.stringify(barberList));
+      }
+
+      const usersRaw = await AsyncStorage.getItem(BARBER_USERS_KEY);
+      const users: StoredBarber[] = usersRaw ? JSON.parse(usersRaw) : [];
+      const userIdx = users.findIndex((u) => u.id === updatedBarber.id);
+      if (userIdx >= 0) {
+        users[userIdx] = { ...users[userIdx], ...updates };
+        await AsyncStorage.setItem(BARBER_USERS_KEY, JSON.stringify(users));
+      }
+
+      console.log('[BarberAuth] Profile updated');
+      return newState;
+    },
+    onSuccess: (state) => {
+      setBarberAuth(state);
+      queryClient.invalidateQueries({ queryKey: ['barber-auth', 'barbers'] });
+    },
+  });
+
+  const updateBarberServicesMutation = useMutation({
+    mutationFn: async (services: BarberService[]) => {
+      if (!barberAuth.barber) throw new Error('Not authenticated as barber');
+      const updatedBarber: BarberProfile = { ...barberAuth.barber, services };
+      const newState: BarberAuthState = { isAuthenticated: true, barber: updatedBarber };
+      await AsyncStorage.setItem(BARBER_AUTH_KEY, JSON.stringify(newState));
+
+      const storedBarbers = await AsyncStorage.getItem(BARBERS_KEY);
+      const barberList: BarberProfile[] = storedBarbers ? JSON.parse(storedBarbers) : [];
+      const idx = barberList.findIndex((b) => b.id === updatedBarber.id);
+      if (idx >= 0) {
+        barberList[idx] = updatedBarber;
+        await AsyncStorage.setItem(BARBERS_KEY, JSON.stringify(barberList));
+      }
+
+      const usersRaw = await AsyncStorage.getItem(BARBER_USERS_KEY);
+      const users: StoredBarber[] = usersRaw ? JSON.parse(usersRaw) : [];
+      const userIdx = users.findIndex((u) => u.id === updatedBarber.id);
+      if (userIdx >= 0) {
+        users[userIdx] = { ...users[userIdx], services };
+        await AsyncStorage.setItem(BARBER_USERS_KEY, JSON.stringify(users));
+      }
+
+      console.log('[BarberAuth] Services updated');
+      return newState;
+    },
+    onSuccess: (state) => {
+      setBarberAuth(state);
+      queryClient.invalidateQueries({ queryKey: ['barber-auth', 'barbers'] });
+    },
+  });
+
   const cancelAppointmentMutation = useMutation({
     mutationFn: async (appointmentId: string) => {
       const updated = appointments.map((a) =>
@@ -267,6 +331,17 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
   const cancelAppointment = useCallback(
     (id: string) => cancelAppointmentMutation.mutateAsync(id),
     [cancelAppointmentMutation]
+  );
+
+  const updateBarberProfile = useCallback(
+    (updates: Partial<Pick<BarberProfile, 'fullName' | 'bio' | 'avatarUrl'>> & { location?: BarberLocation }) =>
+      updateBarberProfileMutation.mutateAsync(updates),
+    [updateBarberProfileMutation]
+  );
+
+  const updateBarberServices = useCallback(
+    (services: BarberService[]) => updateBarberServicesMutation.mutateAsync(services),
+    [updateBarberServicesMutation]
   );
 
   const getBarberAppointments = useCallback(
@@ -343,7 +418,11 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
     getUnreadCount,
     markNotificationRead,
     markAllNotificationsRead,
+    updateBarberProfile,
+    updateBarberServices,
     isBarberLoggingIn: barberLoginMutation.isPending,
+    isUpdatingProfile: updateBarberProfileMutation.isPending,
+    isUpdatingServices: updateBarberServicesMutation.isPending,
     isBarberSigningUp: barberSignupMutation.isPending,
     isBooking: bookAppointmentMutation.isPending,
     isLoadingBarbers: barbersQuery.isLoading,
