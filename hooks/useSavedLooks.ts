@@ -9,6 +9,7 @@ export interface SavedLook {
   haircutName: string;
   originalPhoto: string;
   resultPhoto: string;
+  anglePhotos?: string[];
   createdAt: string;
 }
 

@@ -1,21 +1,21 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Dimensions,
   Animated,
-  PanResponder,
   Pressable,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { RotateCw } from 'lucide-react-native';
+import { Play, Pause, Save } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 48;
 const CARD_HEIGHT = CARD_WIDTH * 1.33;
+const ROTATION_INTERVAL = 2000;
 
 interface AngleView {
   label: string;
@@ -26,134 +26,203 @@ interface AngleView {
 
 interface MultiAngleViewerProps {
   views: AngleView[];
+  onSavePhoto?: (index: number) => void;
 }
 
-export default function MultiAngleViewer({ views }: MultiAngleViewerProps) {
+export default function MultiAngleViewer({ views, onSavePhoto }: MultiAngleViewerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const translateX = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [isPlaying, setIsPlaying] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const snapToIndex = useCallback(
-    (index: number) => {
-      const clamped = Math.max(0, Math.min(index, views.length - 1));
-      setActiveIndex(clamped);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      Animated.spring(translateX, {
-        toValue: -clamped * (CARD_WIDTH + 16),
+  const transitionToIndex = useCallback((nextIndex: number) => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      setActiveIndex(nextIndex);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 250,
         useNativeDriver: true,
-        tension: 68,
-        friction: 12,
       }).start();
-    },
-    [views.length, translateX]
-  );
+    });
+  }, [fadeAnim]);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gestureState) =>
-        Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dy) < 30,
-      onPanResponderGrant: () => {
-        Animated.spring(scaleAnim, {
-          toValue: 0.97,
-          useNativeDriver: true,
-          tension: 100,
-          friction: 10,
-        }).start();
-      },
-      onPanResponderMove: (_, gestureState) => {
-        const baseOffset = -activeIndex * (CARD_WIDTH + 16);
-        translateX.setValue(baseOffset + gestureState.dx * 0.8);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        Animated.spring(scaleAnim, {
+  const startRotation = useCallback(() => {
+    setIsPlaying(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    let currentIdx = activeIndex;
+
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    intervalRef.current = setInterval(() => {
+      const nextIdx = (currentIdx + 1) % views.length;
+      currentIdx = nextIdx;
+
+      progressAnim.setValue(0);
+      Animated.timing(progressAnim, {
+        toValue: 1,
+        duration: ROTATION_INTERVAL,
+        useNativeDriver: false,
+      }).start();
+
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(() => {
+        setActiveIndex(nextIdx);
+        Animated.timing(fadeAnim, {
           toValue: 1,
+          duration: 250,
           useNativeDriver: true,
-          tension: 100,
-          friction: 10,
         }).start();
+      });
+    }, ROTATION_INTERVAL);
 
-        const threshold = CARD_WIDTH * 0.25;
-        if (gestureState.dx < -threshold && activeIndex < views.length - 1) {
-          snapToIndex(activeIndex + 1);
-        } else if (gestureState.dx > threshold && activeIndex > 0) {
-          snapToIndex(activeIndex - 1);
-        } else {
-          snapToIndex(activeIndex);
-        }
-      },
-    })
-  ).current;
+    progressAnim.setValue(0);
+    Animated.timing(progressAnim, {
+      toValue: 1,
+      duration: ROTATION_INTERVAL,
+      useNativeDriver: false,
+    }).start();
+  }, [activeIndex, views.length, fadeAnim, progressAnim]);
 
-  const handleDotPress = useCallback(
-    (index: number) => {
-      snapToIndex(index);
-    },
-    [snapToIndex]
-  );
+  const stopRotation = useCallback(() => {
+    setIsPlaying(false);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    progressAnim.setValue(0);
+  }, [progressAnim]);
+
+  const togglePlayback = useCallback(() => {
+    if (isPlaying) {
+      stopRotation();
+    } else {
+      startRotation();
+    }
+  }, [isPlaying, startRotation, stopRotation]);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
+  const handleDotPress = useCallback((index: number) => {
+    if (isPlaying) stopRotation();
+    transitionToIndex(index);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [isPlaying, stopRotation, transitionToIndex]);
+
+  const handleSavePress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onSavePhoto?.(activeIndex);
+  }, [activeIndex, onSavePhoto]);
+
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
+
+  if (views.length === 0) return null;
+
+  const currentView = views[activeIndex];
 
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <RotateCw color={Colors.accent} size={16} />
-        <Text style={styles.headerText}>Swipe to rotate</Text>
+        <View style={styles.badge360}>
+          <Text style={styles.badge360Text}>360°</Text>
+        </View>
+        <Text style={styles.headerText}>Virtual Walkthrough</Text>
       </View>
 
-      <View style={styles.carouselClip} {...panResponder.panHandlers}>
-        <Animated.View
-          style={[
-            styles.carouselTrack,
-            {
-              transform: [{ translateX }, { scale: scaleAnim }],
-            },
-          ]}
-        >
-          {views.map((view, index) => (
-            <View key={view.label} style={styles.card}>
-              <Image
-                source={{ uri: view.image }}
-                style={styles.cardImage}
-                contentFit="cover"
-                transition={200}
-              />
-              <View style={styles.angleBadge}>
-                <Text style={styles.angleBadgeText}>{view.shortLabel}</Text>
-              </View>
-              <View style={styles.angleIndicator}>
-                <View style={styles.compassOuter}>
-                  <View
-                    style={[
-                      styles.compassNeedle,
-                      { transform: [{ rotate: `${view.angle}deg` }] },
-                    ]}
-                  >
-                    <View style={styles.needleTip} />
-                  </View>
-                </View>
-              </View>
-            </View>
-          ))}
+      <View style={styles.viewerContainer}>
+        <Animated.View style={[styles.imageWrapper, { opacity: fadeAnim }]}>
+          <Image
+            source={{ uri: currentView?.image ?? '' }}
+            style={styles.mainImage}
+            contentFit="cover"
+            transition={100}
+          />
         </Animated.View>
+
+        <View style={styles.angleBadge}>
+          <Text style={styles.angleBadgeText}>{currentView?.shortLabel ?? ''}</Text>
+        </View>
+
+        <View style={styles.compassContainer}>
+          <View style={styles.compassOuter}>
+            <View
+              style={[
+                styles.compassNeedle,
+                { transform: [{ rotate: `${currentView?.angle ?? 0}deg` }] },
+              ]}
+            >
+              <View style={styles.needleTip} />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.controlsOverlay}>
+          <Pressable
+            onPress={togglePlayback}
+            style={styles.playBtn}
+            hitSlop={12}
+            testID="play-360-btn"
+          >
+            {isPlaying ? (
+              <Pause color={Colors.white} size={18} fill={Colors.white} />
+            ) : (
+              <Play color={Colors.white} size={18} fill={Colors.white} />
+            )}
+          </Pressable>
+          {onSavePhoto && (
+            <Pressable
+              onPress={handleSavePress}
+              style={styles.savePhotoBtn}
+              hitSlop={12}
+              testID="save-angle-btn"
+            >
+              <Save color={Colors.white} size={16} />
+            </Pressable>
+          )}
+        </View>
+
+        {isPlaying && (
+          <View style={styles.progressBar}>
+            <Animated.View style={[styles.progressFill, { width: progressWidth }]} />
+          </View>
+        )}
       </View>
 
-      <View style={styles.pagination}>
+      <View style={styles.thumbnailRow}>
         {views.map((view, index) => (
           <Pressable
             key={view.label}
             onPress={() => handleDotPress(index)}
-            style={styles.dotButton}
-            hitSlop={8}
+            style={[
+              styles.thumbnail,
+              index === activeIndex && styles.thumbnailActive,
+            ]}
+            testID={`angle-thumb-${index}`}
           >
-            <View
-              style={[
-                styles.dot,
-                index === activeIndex && styles.dotActive,
-              ]}
+            <Image
+              source={{ uri: view.image }}
+              style={styles.thumbnailImage}
+              contentFit="cover"
             />
             <Text
               style={[
-                styles.dotLabel,
-                index === activeIndex && styles.dotLabelActive,
+                styles.thumbLabel,
+                index === activeIndex && styles.thumbLabelActive,
               ]}
             >
               {view.shortLabel}
@@ -173,33 +242,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
     marginBottom: 12,
+  },
+  badge360: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  badge360Text: {
+    color: Colors.white,
+    fontSize: 11,
+    fontWeight: '800' as const,
+    letterSpacing: 0.5,
   },
   headerText: {
     color: Colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '500' as const,
+    fontSize: 14,
+    fontWeight: '600' as const,
   },
-  carouselClip: {
-    overflow: 'hidden',
+  viewerContainer: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     alignSelf: 'center',
     borderRadius: 20,
-  },
-  carouselTrack: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  card: {
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
-    borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: Colors.cardBackground,
   },
-  cardImage: {
+  imageWrapper: {
+    width: '100%',
+    height: '100%',
+  },
+  mainImage: {
     width: '100%',
     height: '100%',
   },
@@ -218,7 +293,7 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     letterSpacing: 0.5,
   },
-  angleIndicator: {
+  compassContainer: {
     position: 'absolute',
     top: 14,
     right: 14,
@@ -244,34 +319,77 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: Colors.accent,
   },
-  pagination: {
+  controlsOverlay: {
+    position: 'absolute',
+    bottom: 14,
+    right: 14,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  playBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  savePhotoBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(200,149,108,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  progressBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: Colors.accent,
+  },
+  thumbnailRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 20,
-    marginTop: 16,
+    gap: 10,
+    marginTop: 14,
+    paddingHorizontal: 8,
   },
-  dotButton: {
+  thumbnail: {
     alignItems: 'center',
-    gap: 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    opacity: 0.6,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.border,
+  thumbnailActive: {
+    borderColor: Colors.accent,
+    opacity: 1,
   },
-  dotActive: {
-    backgroundColor: Colors.accent,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  thumbnailImage: {
+    width: 60,
+    height: 72,
+    borderRadius: 10,
   },
-  dotLabel: {
+  thumbLabel: {
     color: Colors.textMuted,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600' as const,
+    marginTop: 4,
+    marginBottom: 4,
   },
-  dotLabelActive: {
+  thumbLabelActive: {
     color: Colors.accent,
   },
 });

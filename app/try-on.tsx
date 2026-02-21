@@ -4,11 +4,13 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  ActivityIndicator,
   Alert,
   ScrollView,
   Animated,
+  TextInput,
+  KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Image } from 'expo-image';
@@ -23,6 +25,10 @@ import {
   RotateCcw,
   ChevronLeft,
   Eye,
+  Send,
+  MessageCircle,
+  Download,
+  RefreshCw,
 } from 'lucide-react-native';
 import Colors from '@/constants/colors';
 import { HAIRCUTS } from '@/constants/haircuts';
@@ -36,6 +42,13 @@ interface AngleView {
   shortLabel: string;
   image: string;
   angle: number;
+}
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  isLoading?: boolean;
 }
 
 const ANGLE_CONFIGS = [
@@ -61,7 +74,7 @@ const ANGLE_CONFIGS = [
     label: 'Back View',
     shortLabel: 'Back',
     angle: 180,
-    promptSuffix: 'Show the back of the person\'s head to display the hairstyle from behind. Keep the same skin tone, head shape, and neck. Focus on showing the back of the hairstyle clearly.',
+    promptSuffix: 'Show the person\'s head from behind to display the hairstyle from the back. Keep the same skin tone, head shape, and neck. Focus on showing the back of the hairstyle clearly.',
   },
 ];
 
@@ -69,6 +82,7 @@ export default function TryOnScreen() {
   const { haircutId } = useLocalSearchParams<{ haircutId: string }>();
   const router = useRouter();
   const { saveLook } = useSavedLooks();
+  const scrollRef = useRef<ScrollView>(null);
 
   const haircut = HAIRCUTS.find((h) => h.id === haircutId);
 
@@ -80,6 +94,11 @@ export default function TryOnScreen() {
   const [processingText, setProcessingText] = useState('Analyzing your photo...');
   const [processingProgress, setProcessingProgress] = useState(0);
   const [generatedCount, setGeneratedCount] = useState(0);
+  const [currentPrompt, setCurrentPrompt] = useState('');
+
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -87,6 +106,8 @@ export default function TryOnScreen() {
   const progressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    fadeAnim.setValue(0);
+    slideAnim.setValue(30);
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -216,11 +237,14 @@ export default function TryOnScreen() {
     []
   );
 
-  const processImage = useCallback(async () => {
+  const processImage = useCallback(async (prompt?: string) => {
     if (!userPhotoBase64 || !haircut) {
       Alert.alert('Error', 'Please select a photo first.');
       return;
     }
+
+    const haircutPrompt = prompt || haircut.prompt;
+    setCurrentPrompt(haircutPrompt);
 
     setStep('processing');
     setIsProcessing(true);
@@ -251,7 +275,7 @@ export default function TryOnScreen() {
         setProcessingText(`Generating ${config.shortLabel.toLowerCase()} view...`);
         setProcessingProgress((i / ANGLE_CONFIGS.length) * 100);
 
-        const imageUri = await generateAngle(userPhotoBase64, haircut.prompt, config);
+        const imageUri = await generateAngle(userPhotoBase64, haircutPrompt, config);
         if (imageUri) {
           results.push({
             label: config.label,
@@ -274,6 +298,16 @@ export default function TryOnScreen() {
       setAngleViews(results);
       setStep('result');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      if (chatMessages.length === 0) {
+        setChatMessages([
+          {
+            id: 'welcome',
+            role: 'assistant',
+            text: `Your ${haircut.name} is ready! Want to make any adjustments? You can say things like:\n\n• "Make the top shorter"\n• "Fade the sides more"\n• "Add more texture"\n• "Make it look messier"\n• "Tighten the lineup"`,
+          },
+        ]);
+      }
     } catch (error) {
       console.error('[TryOn] Error processing image:', error);
       Alert.alert(
@@ -285,9 +319,9 @@ export default function TryOnScreen() {
       clearInterval(msgInterval);
       setIsProcessing(false);
     }
-  }, [userPhotoBase64, haircut, generateAngle]);
+  }, [userPhotoBase64, haircut, generateAngle, chatMessages.length]);
 
-  const handleSave = useCallback(() => {
+  const handleSaveAll = useCallback(() => {
     if (angleViews.length === 0 || !haircut || !userPhoto) return;
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -298,13 +332,113 @@ export default function TryOnScreen() {
       haircutName: haircut.name,
       originalPhoto: userPhoto,
       resultPhoto: angleViews[0].image,
+      anglePhotos: angleViews.map((v) => v.image),
       createdAt: new Date().toISOString(),
     });
 
-    Alert.alert('Saved!', 'Your new look has been saved to My Looks.', [
+    Alert.alert('Saved!', 'Your new look and all angles have been saved to My Looks.', [
       { text: 'OK' },
     ]);
   }, [angleViews, haircut, userPhoto, saveLook]);
+
+  const handleSaveAnglePhoto = useCallback((index: number) => {
+    if (!angleViews[index] || !haircut || !userPhoto) return;
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    saveLook({
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      haircutId: haircut.id,
+      haircutName: `${haircut.name} (${angleViews[index].shortLabel})`,
+      originalPhoto: userPhoto,
+      resultPhoto: angleViews[index].image,
+      createdAt: new Date().toISOString(),
+    });
+
+    Alert.alert('Saved!', `${angleViews[index].shortLabel} view saved to My Looks.`);
+  }, [angleViews, haircut, userPhoto, saveLook]);
+
+  const handleSendEdit = useCallback(async () => {
+    if (!chatInput.trim() || isRegenerating || !haircut || !userPhotoBase64) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput('');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      text: userMessage,
+    };
+    const loadingMsg: ChatMessage = {
+      id: `loading-${Date.now()}`,
+      role: 'assistant',
+      text: '',
+      isLoading: true,
+    };
+
+    setChatMessages((prev) => [...prev, userMsg, loadingMsg]);
+    setIsRegenerating(true);
+
+    try {
+      const editedPrompt = `${currentPrompt || haircut.prompt}. Additional edit: ${userMessage}`;
+      setCurrentPrompt(editedPrompt);
+
+      console.log('[TryOn] Regenerating with edit:', userMessage);
+
+      const results: AngleView[] = [];
+      for (let i = 0; i < ANGLE_CONFIGS.length; i++) {
+        const config = ANGLE_CONFIGS[i];
+        const imageUri = await generateAngle(userPhotoBase64, editedPrompt, config);
+        if (imageUri) {
+          results.push({
+            label: config.label,
+            shortLabel: config.shortLabel,
+            image: imageUri,
+            angle: config.angle,
+          });
+        }
+      }
+
+      if (results.length > 0) {
+        setAngleViews(results);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        setChatMessages((prev) =>
+          prev
+            .filter((m) => !m.isLoading)
+            .concat({
+              id: `assistant-${Date.now()}`,
+              role: 'assistant',
+              text: `Done! I've applied your edit: "${userMessage}". The new look is showing above. Want any more changes?`,
+            })
+        );
+      } else {
+        setChatMessages((prev) =>
+          prev
+            .filter((m) => !m.isLoading)
+            .concat({
+              id: `assistant-${Date.now()}`,
+              role: 'assistant',
+              text: "Sorry, I couldn't apply that edit. Try describing the change differently.",
+            })
+        );
+      }
+    } catch (error) {
+      console.error('[TryOn] Error regenerating:', error);
+      setChatMessages((prev) =>
+        prev
+          .filter((m) => !m.isLoading)
+          .concat({
+            id: `error-${Date.now()}`,
+            role: 'assistant',
+            text: 'Something went wrong while applying your edit. Please try again.',
+          })
+      );
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [chatInput, isRegenerating, haircut, userPhotoBase64, currentPrompt, generateAngle]);
 
   const handleReset = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -313,6 +447,9 @@ export default function TryOnScreen() {
     setAngleViews([]);
     setGeneratedCount(0);
     setProcessingProgress(0);
+    setChatMessages([]);
+    setChatInput('');
+    setCurrentPrompt('');
     setStep('select-photo');
     fadeAnim.setValue(0);
     slideAnim.setValue(30);
@@ -332,7 +469,11 @@ export default function TryOnScreen() {
   });
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
       <Stack.Screen
         options={{
           title: haircut.name,
@@ -349,9 +490,11 @@ export default function TryOnScreen() {
       />
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {step === 'select-photo' && (
           <Animated.View
@@ -381,7 +524,7 @@ export default function TryOnScreen() {
             <View style={styles.featureBadge}>
               <Eye color={Colors.accent} size={14} />
               <Text style={styles.featureBadgeText}>
-                Multi-angle 360° preview
+                360° preview + AI editor
               </Text>
             </View>
 
@@ -405,7 +548,7 @@ export default function TryOnScreen() {
                 </View>
 
                 <Pressable
-                  onPress={processImage}
+                  onPress={() => processImage()}
                   style={styles.generateBtn}
                   testID="generate-btn"
                 >
@@ -415,7 +558,7 @@ export default function TryOnScreen() {
                   </Text>
                 </Pressable>
                 <Text style={styles.generateHint}>
-                  Generates front, side, and back views
+                  Generates front, side, and back views with AI editing
                 </Text>
               </View>
             ) : (
@@ -522,31 +665,56 @@ export default function TryOnScreen() {
           >
             <Text style={styles.resultTitle}>Your New Look</Text>
             <Text style={styles.resultSubtitle}>
-              {haircut.name} · {angleViews.length} angles generated
+              {haircut.name} · {angleViews.length} angles
             </Text>
 
-            <MultiAngleViewer views={angleViews} />
-
-            <View style={styles.beforeAfterRow}>
-              <View style={styles.beforeCard}>
-                <Text style={styles.beforeLabel}>ORIGINAL</Text>
+            <View style={styles.frontPhotoSection}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionDot} />
+                <Text style={styles.sectionHeaderText}>FRONT VIEW</Text>
+              </View>
+              <View style={styles.frontPhotoCard}>
                 <Image
-                  source={{ uri: userPhoto ?? '' }}
-                  style={styles.beforeImage}
+                  source={{ uri: angleViews[0].image }}
+                  style={styles.frontPhoto}
                   contentFit="cover"
                   transition={300}
                 />
+                <Pressable
+                  onPress={() => handleSaveAnglePhoto(0)}
+                  style={styles.frontSaveBtn}
+                  hitSlop={8}
+                  testID="save-front-btn"
+                >
+                  <Download color={Colors.white} size={16} />
+                  <Text style={styles.frontSaveBtnText}>Save</Text>
+                </Pressable>
               </View>
             </View>
 
+            <View style={styles.divider} />
+
+            <View style={styles.rotationSection}>
+              <View style={styles.sectionHeader}>
+                <View style={[styles.sectionDot, { backgroundColor: Colors.success }]} />
+                <Text style={styles.sectionHeaderText}>360° WALKTHROUGH</Text>
+              </View>
+              <MultiAngleViewer
+                views={angleViews}
+                onSavePhoto={handleSaveAnglePhoto}
+              />
+            </View>
+
+            <View style={styles.divider} />
+
             <View style={styles.resultActions}>
               <Pressable
-                onPress={handleSave}
-                style={styles.saveBtn}
-                testID="save-btn"
+                onPress={handleSaveAll}
+                style={styles.saveAllBtn}
+                testID="save-all-btn"
               >
                 <Save color={Colors.white} size={20} />
-                <Text style={styles.saveBtnText}>Save Look</Text>
+                <Text style={styles.saveAllBtnText}>Save All Photos</Text>
               </Pressable>
               <Pressable
                 onPress={handleReset}
@@ -554,13 +722,81 @@ export default function TryOnScreen() {
                 testID="retry-btn"
               >
                 <RotateCcw color={Colors.accent} size={20} />
-                <Text style={styles.retryBtnText}>Try Again</Text>
+                <Text style={styles.retryBtnText}>Start Over</Text>
               </Pressable>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.chatSection}>
+              <View style={styles.chatHeader}>
+                <MessageCircle color={Colors.accent} size={18} />
+                <Text style={styles.chatHeaderText}>Edit Your Haircut</Text>
+              </View>
+              <Text style={styles.chatSubtext}>
+                Describe changes and we'll regenerate all angles
+              </Text>
+
+              <View style={styles.chatMessages}>
+                {chatMessages.map((msg) => (
+                  <View
+                    key={msg.id}
+                    style={[
+                      styles.chatBubble,
+                      msg.role === 'user' ? styles.chatBubbleUser : styles.chatBubbleAssistant,
+                    ]}
+                  >
+                    {msg.isLoading ? (
+                      <View style={styles.loadingRow}>
+                        <ActivityIndicator size="small" color={Colors.accent} />
+                        <Text style={styles.loadingText}>Regenerating your haircut...</Text>
+                      </View>
+                    ) : (
+                      <Text
+                        style={[
+                          styles.chatBubbleText,
+                          msg.role === 'user' && styles.chatBubbleTextUser,
+                        ]}
+                      >
+                        {msg.text}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.chatInputRow}>
+                <TextInput
+                  style={styles.chatInput}
+                  value={chatInput}
+                  onChangeText={setChatInput}
+                  placeholder="e.g. Make the top shorter..."
+                  placeholderTextColor={Colors.textMuted}
+                  multiline
+                  editable={!isRegenerating}
+                  testID="chat-input"
+                />
+                <Pressable
+                  onPress={handleSendEdit}
+                  style={[
+                    styles.sendBtn,
+                    (!chatInput.trim() || isRegenerating) && styles.sendBtnDisabled,
+                  ]}
+                  disabled={!chatInput.trim() || isRegenerating}
+                  testID="send-edit-btn"
+                >
+                  {isRegenerating ? (
+                    <RefreshCw color={Colors.white} size={18} />
+                  ) : (
+                    <Send color={Colors.white} size={18} />
+                  )}
+                </Pressable>
+              </View>
             </View>
           </Animated.View>
         )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -835,34 +1071,65 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     marginTop: 4,
   },
-  beforeAfterRow: {
-    marginTop: 20,
-    marginBottom: 20,
+  frontPhotoSection: {
+    marginBottom: 8,
   },
-  beforeCard: {
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
   },
-  beforeLabel: {
-    color: Colors.textMuted,
-    fontSize: 10,
+  sectionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.accent,
+  },
+  sectionHeaderText: {
+    color: Colors.textSecondary,
+    fontSize: 11,
     fontWeight: '700' as const,
     letterSpacing: 1.5,
-    marginBottom: 8,
-    textAlign: 'center',
   },
-  beforeImage: {
+  frontPhotoCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: Colors.cardBackground,
+  },
+  frontPhoto: {
     width: '100%',
-    height: 200,
-    borderRadius: 12,
+    height: 420,
+  },
+  frontSaveBtn: {
+    position: 'absolute',
+    bottom: 14,
+    right: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(200,149,108,0.85)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  frontSaveBtnText: {
+    color: Colors.white,
+    fontSize: 13,
+    fontWeight: '700' as const,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginVertical: 20,
+  },
+  rotationSection: {
+    marginBottom: 8,
   },
   resultActions: {
     gap: 12,
   },
-  saveBtn: {
+  saveAllBtn: {
     backgroundColor: Colors.accent,
     borderRadius: 14,
     paddingVertical: 16,
@@ -871,7 +1138,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
   },
-  saveBtnText: {
+  saveAllBtnText: {
     color: Colors.white,
     fontSize: 17,
     fontWeight: '700' as const,
@@ -891,5 +1158,96 @@ const styles = StyleSheet.create({
     color: Colors.accent,
     fontSize: 17,
     fontWeight: '600' as const,
+  },
+  chatSection: {
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  chatHeaderText: {
+    color: Colors.text,
+    fontSize: 17,
+    fontWeight: '700' as const,
+  },
+  chatSubtext: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    marginBottom: 16,
+    marginLeft: 26,
+  },
+  chatMessages: {
+    gap: 10,
+    marginBottom: 14,
+  },
+  chatBubble: {
+    borderRadius: 16,
+    padding: 12,
+    maxWidth: '88%',
+  },
+  chatBubbleUser: {
+    backgroundColor: Colors.accent,
+    alignSelf: 'flex-end',
+    borderBottomRightRadius: 4,
+  },
+  chatBubbleAssistant: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignSelf: 'flex-start',
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  chatBubbleText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  chatBubbleTextUser: {
+    color: Colors.white,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingText: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    fontStyle: 'italic' as const,
+  },
+  chatInputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
+  },
+  chatInput: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: Colors.text,
+    fontSize: 15,
+    maxHeight: 100,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  sendBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendBtnDisabled: {
+    opacity: 0.4,
   },
 });

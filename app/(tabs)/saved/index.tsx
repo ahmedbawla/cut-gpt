@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,15 +7,122 @@ import {
   Pressable,
   Alert,
   Animated,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Trash2, ImageOff, Calendar } from 'lucide-react-native';
+import { Trash2, ImageOff, Calendar, Images, X, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useSavedLooks, SavedLook } from '@/hooks/useSavedLooks';
 
-function SavedLookCard({ look, onDelete }: { look: SavedLook; onDelete: (id: string) => void }) {
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+function PhotoGalleryModal({
+  visible,
+  photos,
+  title,
+  onClose,
+}: {
+  visible: boolean;
+  photos: string[];
+  title: string;
+  onClose: () => void;
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  const goTo = useCallback(
+    (index: number) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }).start(() => {
+        setCurrentIndex(index);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }).start();
+      });
+    },
+    [fadeAnim]
+  );
+
+  const labels = ['Front', 'Left', 'Right', 'Back'];
+
+  return (
+    <Modal visible={visible} animationType="fade" transparent>
+      <View style={galleryStyles.overlay}>
+        <View style={galleryStyles.header}>
+          <Text style={galleryStyles.title}>{title}</Text>
+          <Pressable onPress={onClose} style={galleryStyles.closeBtn} hitSlop={12}>
+            <X color={Colors.white} size={22} />
+          </Pressable>
+        </View>
+
+        <View style={galleryStyles.imageArea}>
+          {currentIndex > 0 && (
+            <Pressable
+              onPress={() => goTo(currentIndex - 1)}
+              style={[galleryStyles.navBtn, galleryStyles.navLeft]}
+              hitSlop={12}
+            >
+              <ChevronLeft color={Colors.white} size={28} />
+            </Pressable>
+          )}
+
+          <Animated.View style={{ opacity: fadeAnim, flex: 1 }}>
+            <Image
+              source={{ uri: photos[currentIndex] }}
+              style={galleryStyles.fullImage}
+              contentFit="contain"
+            />
+          </Animated.View>
+
+          {currentIndex < photos.length - 1 && (
+            <Pressable
+              onPress={() => goTo(currentIndex + 1)}
+              style={[galleryStyles.navBtn, galleryStyles.navRight]}
+              hitSlop={12}
+            >
+              <ChevronRight color={Colors.white} size={28} />
+            </Pressable>
+          )}
+        </View>
+
+        <Text style={galleryStyles.label}>
+          {labels[currentIndex] ?? `Photo ${currentIndex + 1}`}
+        </Text>
+
+        <View style={galleryStyles.dots}>
+          {photos.map((_, i) => (
+            <Pressable key={i} onPress={() => goTo(i)}>
+              <View
+                style={[
+                  galleryStyles.dot,
+                  i === currentIndex && galleryStyles.dotActive,
+                ]}
+              />
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function SavedLookCard({
+  look,
+  onDelete,
+}: {
+  look: SavedLook;
+  onDelete: (id: string) => void;
+}) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {
@@ -53,11 +160,19 @@ function SavedLookCard({ look, onDelete }: { look: SavedLook; onDelete: (id: str
     year: 'numeric',
   });
 
+  const hasMultipleAngles = look.anglePhotos && look.anglePhotos.length > 1;
+
   return (
     <Animated.View style={[styles.cardWrapper, { transform: [{ scale: scaleAnim }] }]}>
       <Pressable
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        onPress={() => {
+          if (hasMultipleAngles) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setGalleryOpen(true);
+          }
+        }}
         style={styles.card}
         testID={`saved-look-${look.id}`}
       >
@@ -82,6 +197,12 @@ function SavedLookCard({ look, onDelete }: { look: SavedLook; onDelete: (id: str
               contentFit="cover"
               transition={200}
             />
+            {hasMultipleAngles && (
+              <View style={styles.angleBadge}>
+                <Images color={Colors.white} size={12} />
+                <Text style={styles.angleBadgeText}>{look.anglePhotos?.length}</Text>
+              </View>
+            )}
           </View>
         </View>
         <View style={styles.cardFooter}>
@@ -90,6 +211,9 @@ function SavedLookCard({ look, onDelete }: { look: SavedLook; onDelete: (id: str
             <View style={styles.dateRow}>
               <Calendar color={Colors.textMuted} size={12} />
               <Text style={styles.dateText}>{formattedDate}</Text>
+              {hasMultipleAngles && (
+                <Text style={styles.tapHint}>Tap to view all angles</Text>
+              )}
             </View>
           </View>
           <Pressable
@@ -102,6 +226,15 @@ function SavedLookCard({ look, onDelete }: { look: SavedLook; onDelete: (id: str
           </Pressable>
         </View>
       </Pressable>
+
+      {hasMultipleAngles && look.anglePhotos && (
+        <PhotoGalleryModal
+          visible={galleryOpen}
+          photos={look.anglePhotos}
+          title={look.haircutName}
+          onClose={() => setGalleryOpen(false)}
+        />
+      )}
     </Animated.View>
   );
 }
@@ -142,6 +275,88 @@ export default function SavedScreen() {
     </View>
   );
 }
+
+const galleryStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 16,
+  },
+  title: {
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: '700' as const,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageArea: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullImage: {
+    width: SCREEN_WIDTH - 32,
+    height: SCREEN_HEIGHT * 0.55,
+    borderRadius: 16,
+    alignSelf: 'center',
+  },
+  navBtn: {
+    position: 'absolute',
+    top: '45%',
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navLeft: {
+    left: 12,
+  },
+  navRight: {
+    right: 12,
+  },
+  label: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '600' as const,
+    marginTop: 12,
+  },
+  dots: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 24,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  dotActive: {
+    backgroundColor: Colors.accent,
+    width: 24,
+    borderRadius: 4,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -188,6 +403,23 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
   },
+  angleBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(200,149,108,0.8)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  angleBadgeText: {
+    color: Colors.white,
+    fontSize: 11,
+    fontWeight: '700' as const,
+  },
   arrowContainer: {
     width: 30,
     alignItems: 'center',
@@ -218,10 +450,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     marginTop: 4,
+    flexWrap: 'wrap',
   },
   dateText: {
     color: Colors.textMuted,
     fontSize: 12,
+  },
+  tapHint: {
+    color: Colors.accent,
+    fontSize: 11,
+    fontWeight: '500' as const,
+    marginLeft: 6,
   },
   deleteBtn: {
     width: 40,
