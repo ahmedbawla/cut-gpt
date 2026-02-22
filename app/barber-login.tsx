@@ -11,8 +11,11 @@ import {
   Animated,
   ActivityIndicator,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { Eye, EyeOff, ArrowRight, UserPlus, ArrowLeft, MapPin, DollarSign, Plus, X, Check } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
@@ -152,7 +155,7 @@ export default function BarberLoginScreen() {
           <Animated.View style={[styles.logoSection, { transform: [{ scale: logoScale }] }]}>
             <Image
               source={require('@/assets/images/cuttr-logo.png')}
-              style={{ width: 340, height: 120 }}
+              style={styles.logoImage}
               contentFit="contain"
             />
             <Text style={styles.appTagline}>Barber Portal</Text>
@@ -315,7 +318,8 @@ const styles = StyleSheet.create({
   keyboardView: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingVertical: 48, paddingTop: 20 },
   backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 1, borderColor: Colors.border },
-  logoSection: { alignItems: 'center', marginBottom: 32 },
+  logoSection: { alignItems: 'center', justifyContent: 'center', marginBottom: 32, width: '100%' },
+  logoImage: { width: SCREEN_WIDTH * 0.75, height: 160, alignSelf: 'center' },
   logoCircle: { width: 64, height: 64, borderRadius: 18, backgroundColor: Colors.tealMuted, alignItems: 'center', justifyContent: 'center', marginBottom: 14, borderWidth: 1, borderColor: Colors.tealBorder },
   appName: { fontSize: 24, fontWeight: '800' as const, color: Colors.text, letterSpacing: 2 },
   appTagline: { fontSize: 13, color: Colors.teal, marginTop: 4, fontWeight: '600' as const },

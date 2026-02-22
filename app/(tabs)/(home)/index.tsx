@@ -105,7 +105,7 @@ export default function HomeScreen() {
     () => (
       <View style={styles.header}>
         <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-          <View>
+          <View style={styles.topBarContent}>
             <Image
               source={require('@/assets/images/cuttr-logo.png')}
               style={styles.brandLogo}
@@ -281,10 +281,15 @@ const styles = StyleSheet.create({
   topBar: {
     paddingBottom: 20,
   },
+  topBarContent: {
+    alignItems: 'center' as const,
+    width: '100%' as const,
+  },
   brandLogo: {
-    width: 240,
-    height: 80,
+    width: 220,
+    height: 90,
     marginBottom: 12,
+    alignSelf: 'center' as const,
   },
   heroTitle: {
     fontSize: 30,

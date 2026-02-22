@@ -1007,9 +1007,10 @@ export default function BarberDashboardScreen() {
           headerStyle: { backgroundColor: Colors.background },
           headerTintColor: Colors.text,
           headerShadowVisible: false,
-          headerLeft: () => (
-            <Image source={require('@/assets/images/cuttr-logo.png')} style={{ width: 220, height: 70 }} contentFit="contain" />
+          headerTitle: () => (
+            <Image source={require('@/assets/images/cuttr-logo.png')} style={{ width: 180, height: 50 }} contentFit="contain" />
           ),
+          headerLeft: () => null,
         }}
       />
 
