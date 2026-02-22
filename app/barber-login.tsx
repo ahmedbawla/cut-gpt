@@ -152,7 +152,7 @@ export default function BarberLoginScreen() {
           <Animated.View style={[styles.logoSection, { transform: [{ scale: logoScale }] }]}>
             <Image
               source={require('@/assets/images/cuttr-logo.png')}
-              style={{ width: 140, height: 48 }}
+              style={{ width: 340, height: 120 }}
               contentFit="contain"
             />
             <Text style={styles.appTagline}>Barber Portal</Text>

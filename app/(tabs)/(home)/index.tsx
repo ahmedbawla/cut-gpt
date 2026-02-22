@@ -282,9 +282,9 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   brandLogo: {
-    width: 100,
-    height: 32,
-    marginBottom: 8,
+    width: 240,
+    height: 80,
+    marginBottom: 12,
   },
   heroTitle: {
     fontSize: 30,
