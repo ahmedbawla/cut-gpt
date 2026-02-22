@@ -286,8 +286,8 @@ const styles = StyleSheet.create({
     width: '100%' as const,
   },
   brandLogo: {
-    width: 220,
-    height: 90,
+    width: 440,
+    height: 180,
     marginBottom: 12,
     alignSelf: 'center' as const,
   },

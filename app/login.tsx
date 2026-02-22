@@ -549,8 +549,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   logoImage: {
-    width: SCREEN_WIDTH * 0.75,
-    height: 180,
+    width: SCREEN_WIDTH * 1.5,
+    height: 360,
     alignSelf: 'center',
   },
   formCard: {

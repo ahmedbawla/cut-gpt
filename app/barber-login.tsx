@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingVertical: 48, paddingTop: 20 },
   backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 1, borderColor: Colors.border },
   logoSection: { alignItems: 'center', justifyContent: 'center', marginBottom: 32, width: '100%' },
-  logoImage: { width: SCREEN_WIDTH * 0.75, height: 160, alignSelf: 'center' },
+  logoImage: { width: SCREEN_WIDTH * 1.5, height: 320, alignSelf: 'center' },
   logoCircle: { width: 64, height: 64, borderRadius: 18, backgroundColor: Colors.tealMuted, alignItems: 'center', justifyContent: 'center', marginBottom: 14, borderWidth: 1, borderColor: Colors.tealBorder },
   appName: { fontSize: 24, fontWeight: '800' as const, color: Colors.text, letterSpacing: 2 },
   appTagline: { fontSize: 13, color: Colors.teal, marginTop: 4, fontWeight: '600' as const },
