@@ -150,6 +150,37 @@ function PhotoGalleryModal({
             <ImageDown color={Colors.black} size={16} />
             <Text style={galleryStyles.actionBtnText}>Save</Text>
           </Pressable>
+          <Pressable onPress={async () => {
+            if (Platform.OS === 'web') {
+              for (const photo of photos) {
+                try {
+                  const link = document.createElement('a');
+                  link.href = photo;
+                  link.download = `haircut-${Date.now()}.jpg`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                } catch (e) { console.error(e); }
+              }
+              return;
+            }
+            try {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              const { status } = await MediaLibrary.requestPermissionsAsync();
+              if (status !== 'granted') { Alert.alert('Permission Needed', 'Photo library access is required.'); return; }
+              let count = 0;
+              for (let i = 0; i < photos.length; i++) {
+                const fn = `saved_all_${Date.now()}_${i}.jpg`;
+                const fp = await saveBase64ToFile(photos[i], fn);
+                if (fp) { await MediaLibrary.saveToLibraryAsync(fp); count++; }
+              }
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert('Saved!', `${count} photos saved to camera roll.`);
+            } catch (e) { console.error(e); Alert.alert('Error', 'Failed to save.'); }
+          }} style={galleryStyles.actionBtn}>
+            <ImageDown color={Colors.black} size={16} />
+            <Text style={galleryStyles.actionBtnText}>Save All</Text>
+          </Pressable>
           <Pressable onPress={handleShare} style={[galleryStyles.actionBtn, galleryStyles.shareActionBtn]}>
             <Share2 color={Colors.white} size={16} />
             <Text style={[galleryStyles.actionBtnText, galleryStyles.shareActionText]}>Share</Text>

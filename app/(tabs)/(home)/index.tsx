@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Search, X, Heart, Sparkles, Wand2 } from 'lucide-react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -105,10 +106,11 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
           <View>
-            <View style={styles.brandRow}>
-              <Sparkles color={Colors.accent} size={16} />
-              <Text style={styles.brandLabel}>CUT-GPT</Text>
-            </View>
+            <Image
+              source={require('@/assets/images/cuttr-logo.png')}
+              style={styles.brandLogo}
+              contentFit="contain"
+            />
             <Text style={styles.heroTitle}>Discover{'\n'}Your Style</Text>
           </View>
         </View>
@@ -279,17 +281,10 @@ const styles = StyleSheet.create({
   topBar: {
     paddingBottom: 20,
   },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  brandLogo: {
+    width: 100,
+    height: 32,
     marginBottom: 8,
-  },
-  brandLabel: {
-    fontSize: 11,
-    fontWeight: '700' as const,
-    color: Colors.accent,
-    letterSpacing: 2,
   },
   heroTitle: {
     fontSize: 30,

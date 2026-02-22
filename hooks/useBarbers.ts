@@ -322,6 +322,29 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
     },
   });
 
+  const declineAppointmentMutation = useMutation({
+    mutationFn: async (appointmentId: string) => {
+      const apt = appointments.find((a) => a.id === appointmentId);
+      if (apt) {
+        const bookedAt = new Date(apt.createdAt).getTime();
+        const now = Date.now();
+        if ((now - bookedAt) > 60 * 60 * 1000) {
+          throw new Error('Can only decline within 1 hour of booking');
+        }
+      }
+      const updated = appointments.map((a) =>
+        a.id === appointmentId ? { ...a, status: 'declined' as const } : a
+      );
+      await AsyncStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(updated));
+      console.log('[Appointments] Declined:', appointmentId);
+      return updated;
+    },
+    onSuccess: (updated) => {
+      setAppointments(updated);
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
+
   const deleteAppointmentMutation = useMutation({
     mutationFn: async (appointmentId: string) => {
       const updated = appointments.filter((a) => a.id !== appointmentId);
@@ -378,6 +401,11 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
   const cancelAppointment = useCallback(
     (id: string) => cancelAppointmentMutation.mutateAsync(id),
     [cancelAppointmentMutation]
+  );
+
+  const declineAppointment = useCallback(
+    (id: string) => declineAppointmentMutation.mutateAsync(id),
+    [declineAppointmentMutation]
   );
 
   const deleteAppointment = useCallback(
@@ -470,6 +498,7 @@ export const [BarbersProvider, useBarbers] = createContextHook(() => {
     barberLogout,
     bookAppointment,
     cancelAppointment,
+    declineAppointment,
     deleteAppointment,
     updateAppointment,
     getBarberAppointments,

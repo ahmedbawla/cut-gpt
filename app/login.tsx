@@ -13,7 +13,8 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
-import { Scissors, Eye, EyeOff, ArrowRight, UserPlus, Briefcase } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import { Eye, EyeOff, ArrowRight, UserPlus, Briefcase, Phone, Mail, ShieldCheck } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
@@ -22,24 +23,35 @@ import { useAuth } from '@/hooks/useAuth';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type AuthMode = 'login' | 'signup';
+type SignupMethod = 'email' | 'phone';
+type SignupStep = 'info' | 'verify';
+
+function generateCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
 
 export default function LoginScreen() {
   const router = useRouter();
   const { login, signup, isLoggingIn, isSigningUp } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>('login');
+  const [signupMethod, setSignupMethod] = useState<SignupMethod>('email');
+  const [signupStep, setSignupStep] = useState<SignupStep>('info');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const logoFade = useRef(new Animated.Value(0)).current;
   const logoSlide = useRef(new Animated.Value(-20)).current;
-  const lineWidth = useRef(new Animated.Value(0)).current;
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -59,11 +71,6 @@ export default function LoginScreen() {
           useNativeDriver: true,
         }),
       ]),
-      Animated.timing(lineWidth, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: false,
-      }),
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -82,63 +89,95 @@ export default function LoginScreen() {
   const toggleMode = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setMode((m) => (m === 'login' ? 'signup' : 'login'));
+    setSignupStep('info');
     setError(null);
     setPassword('');
     setConfirmPassword('');
+    setVerificationCode('');
   }, []);
 
   const validateEmail = useCallback((e: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
   }, []);
 
-  const handleSubmit = useCallback(async () => {
+  const validatePhone = useCallback((p: string) => {
+    return /^\+?[\d\s\-()]{10,}$/.test(p);
+  }, []);
+
+  const handleLogin = useCallback(async () => {
     setError(null);
-
-    if (!email.trim()) {
-      setError('Please enter your email');
-      return;
-    }
-    if (!validateEmail(email.trim())) {
-      setError('Please enter a valid email');
-      return;
-    }
-    if (!password || password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
-    if (mode === 'signup') {
-      if (!fullName.trim()) {
-        setError('Please enter your full name');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError('Passwords do not match');
-        return;
-      }
-    }
+    if (!email.trim()) { setError('Please enter your email'); return; }
+    if (!validateEmail(email.trim())) { setError('Please enter a valid email'); return; }
+    if (!password || password.length < 6) { setError('Password must be at least 6 characters'); return; }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
     try {
-      if (mode === 'login') {
-        await login(email.trim(), password);
-      } else {
-        await signup(fullName.trim(), email.trim(), password);
-      }
+      await login(email.trim(), password);
     } catch (err: any) {
-      console.log('[Login] Error:', err.message);
       setError(err.message ?? 'Something went wrong');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
-  }, [mode, email, password, confirmPassword, fullName, login, signup, validateEmail]);
+  }, [email, password, login, validateEmail]);
 
-  const isSubmitting = isLoggingIn || isSigningUp;
+  const handleSignupStep1 = useCallback(() => {
+    setError(null);
+    if (!fullName.trim()) { setError('Please enter your full name'); return; }
 
-  const decorLineWidth = lineWidth.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, SCREEN_WIDTH * 0.2],
-  });
+    if (signupMethod === 'email') {
+      if (!email.trim()) { setError('Please enter your email'); return; }
+      if (!validateEmail(email.trim())) { setError('Please enter a valid email'); return; }
+    } else {
+      if (!phone.trim()) { setError('Please enter your phone number'); return; }
+      if (!validatePhone(phone.trim())) { setError('Please enter a valid phone number'); return; }
+    }
+
+    if (!password || password.length < 6) { setError('Password must be at least 6 characters'); return; }
+    if (password !== confirmPassword) { setError('Passwords do not match'); return; }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const code = generateCode();
+    setGeneratedCode(code);
+    setSignupStep('verify');
+
+    const target = signupMethod === 'email' ? email.trim() : phone.trim();
+    console.log(`[Auth] Verification code for ${target}: ${code}`);
+    Alert.alert(
+      'Verification Code Sent',
+      `A 6-digit code has been sent to ${target}.\n\nFor demo: ${code}`,
+    );
+  }, [fullName, email, phone, password, confirmPassword, signupMethod, validateEmail, validatePhone]);
+
+  const handleVerifyAndSignup = useCallback(async () => {
+    setError(null);
+    if (verificationCode.length !== 6) { setError('Please enter the 6-digit code'); return; }
+    if (verificationCode !== generatedCode) { setError('Invalid verification code'); return; }
+
+    setIsVerifying(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+
+    try {
+      const signupEmail = signupMethod === 'email' ? email.trim() : `${phone.replace(/\D/g, '')}@phone.cuttr.app`;
+      await signup(fullName.trim(), signupEmail, password);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      setError(err.message ?? 'Something went wrong');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsVerifying(false);
+    }
+  }, [verificationCode, generatedCode, signupMethod, email, phone, fullName, password, signup]);
+
+  const handleResendCode = useCallback(() => {
+    const code = generateCode();
+    setGeneratedCode(code);
+    setVerificationCode('');
+    const target = signupMethod === 'email' ? email.trim() : phone.trim();
+    console.log(`[Auth] Resent verification code for ${target}: ${code}`);
+    Alert.alert('Code Resent', `A new code has been sent.\n\nFor demo: ${code}`);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [signupMethod, email, phone]);
+
+  const isSubmitting = isLoggingIn || isSigningUp || isVerifying;
 
   return (
     <View style={styles.container}>
@@ -157,17 +196,11 @@ export default function LoginScreen() {
               { opacity: logoFade, transform: [{ translateY: logoSlide }] },
             ]}
           >
-            <View style={styles.logoRow}>
-              <View style={styles.logoMark}>
-                <Scissors color={Colors.accent} size={22} strokeWidth={2.5} />
-              </View>
-              <Text style={styles.brandName}>CUT-GPT</Text>
-            </View>
-            <View style={styles.taglineRow}>
-              <Animated.View style={[styles.decorLine, { width: decorLineWidth }]} />
-              <Text style={styles.tagline}>AI-POWERED STYLING</Text>
-              <Animated.View style={[styles.decorLine, { width: decorLineWidth }]} />
-            </View>
+            <Image
+              source={require('@/assets/images/cuttr-logo.png')}
+              style={styles.logoImage}
+              contentFit="contain"
+            />
           </Animated.View>
 
           <Animated.View
@@ -176,132 +209,284 @@ export default function LoginScreen() {
               { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
             ]}
           >
-            <Text style={styles.formTitle}>
-              {mode === 'login' ? 'Welcome back' : 'Create account'}
-            </Text>
-            <Text style={styles.formSubtitle}>
-              {mode === 'login'
-                ? 'Sign in to your account'
-                : 'Start your style journey'}
-            </Text>
+            {mode === 'login' ? (
+              <>
+                <Text style={styles.formTitle}>Welcome back</Text>
+                <Text style={styles.formSubtitle}>Sign in to your account</Text>
 
-            {error && (
-              <View style={styles.errorBanner}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
+                {error && (
+                  <View style={styles.errorBanner}>
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                )}
 
-            {mode === 'signup' && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Full Name</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Your name"
-                  placeholderTextColor={Colors.textMuted}
-                  value={fullName}
-                  onChangeText={setFullName}
-                  autoCapitalize="words"
-                  returnKeyType="next"
-                  onSubmitEditing={() => emailRef.current?.focus()}
-                  testID="input-fullname"
-                />
-              </View>
-            )}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Email</Text>
+                  <TextInput
+                    ref={emailRef}
+                    style={styles.input}
+                    placeholder="you@example.com"
+                    placeholderTextColor={Colors.textMuted}
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    autoComplete="email"
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
+                    testID="input-email"
+                  />
+                </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email</Text>
-              <TextInput
-                ref={emailRef}
-                style={styles.input}
-                placeholder="you@example.com"
-                placeholderTextColor={Colors.textMuted}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
-                returnKeyType="next"
-                onSubmitEditing={() => passwordRef.current?.focus()}
-                testID="input-email"
-              />
-            </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Password</Text>
+                  <View style={styles.passwordWrap}>
+                    <TextInput
+                      ref={passwordRef}
+                      style={[styles.input, styles.passwordInput]}
+                      placeholder="Min. 6 characters"
+                      placeholderTextColor={Colors.textMuted}
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      autoComplete="password"
+                      returnKeyType="done"
+                      onSubmitEditing={handleLogin}
+                      testID="input-password"
+                    />
+                    <Pressable
+                      onPress={() => setShowPassword((s) => !s)}
+                      style={styles.eyeBtn}
+                      hitSlop={10}
+                    >
+                      {showPassword ? (
+                        <EyeOff color={Colors.textMuted} size={18} />
+                      ) : (
+                        <Eye color={Colors.textMuted} size={18} />
+                      )}
+                    </Pressable>
+                  </View>
+                </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Password</Text>
-              <View style={styles.passwordWrap}>
-                <TextInput
-                  ref={passwordRef}
-                  style={[styles.input, styles.passwordInput]}
-                  placeholder="Min. 6 characters"
-                  placeholderTextColor={Colors.textMuted}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoComplete="password"
-                  returnKeyType={mode === 'signup' ? 'next' : 'done'}
-                  onSubmitEditing={() => {
-                    if (mode === 'signup') confirmRef.current?.focus();
-                    else handleSubmit();
-                  }}
-                  testID="input-password"
-                />
                 <Pressable
-                  onPress={() => setShowPassword((s) => !s)}
-                  style={styles.eyeBtn}
-                  hitSlop={10}
+                  onPress={handleLogin}
+                  style={({ pressed }) => [
+                    styles.submitBtn,
+                    isSubmitting && styles.submitBtnDisabled,
+                    pressed && !isSubmitting && styles.submitBtnPressed,
+                  ]}
+                  disabled={isSubmitting}
+                  testID="submit-btn"
                 >
-                  {showPassword ? (
-                    <EyeOff color={Colors.textMuted} size={18} />
+                  {isSubmitting ? (
+                    <ActivityIndicator color={Colors.black} size="small" />
                   ) : (
-                    <Eye color={Colors.textMuted} size={18} />
+                    <>
+                      <Text style={styles.submitBtnText}>Sign In</Text>
+                      <ArrowRight color={Colors.black} size={18} />
+                    </>
                   )}
                 </Pressable>
-              </View>
-            </View>
+              </>
+            ) : signupStep === 'info' ? (
+              <>
+                <Text style={styles.formTitle}>Create account</Text>
+                <Text style={styles.formSubtitle}>Start your style journey</Text>
 
-            {mode === 'signup' && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Confirm Password</Text>
-                <TextInput
-                  ref={confirmRef}
-                  style={styles.input}
-                  placeholder="Re-enter password"
-                  placeholderTextColor={Colors.textMuted}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry={!showPassword}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSubmit}
-                  testID="input-confirm-password"
-                />
-              </View>
-            )}
+                {error && (
+                  <View style={styles.errorBanner}>
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                )}
 
-            <Pressable
-              onPress={handleSubmit}
-              style={({ pressed }) => [
-                styles.submitBtn,
-                isSubmitting && styles.submitBtnDisabled,
-                pressed && !isSubmitting && styles.submitBtnPressed,
-              ]}
-              disabled={isSubmitting}
-              testID="submit-btn"
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color={Colors.black} size="small" />
-              ) : (
-                <>
-                  <Text style={styles.submitBtnText}>
-                    {mode === 'login' ? 'Sign In' : 'Create Account'}
+                <View style={styles.methodToggle}>
+                  <Pressable
+                    onPress={() => { setSignupMethod('email'); setError(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                    style={[styles.methodBtn, signupMethod === 'email' && styles.methodBtnActive]}
+                  >
+                    <Mail color={signupMethod === 'email' ? Colors.black : Colors.textMuted} size={14} />
+                    <Text style={[styles.methodBtnText, signupMethod === 'email' && styles.methodBtnTextActive]}>Email</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => { setSignupMethod('phone'); setError(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                    style={[styles.methodBtn, signupMethod === 'phone' && styles.methodBtnActive]}
+                  >
+                    <Phone color={signupMethod === 'phone' ? Colors.black : Colors.textMuted} size={14} />
+                    <Text style={[styles.methodBtnText, signupMethod === 'phone' && styles.methodBtnTextActive]}>Phone</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Full Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Your name"
+                    placeholderTextColor={Colors.textMuted}
+                    value={fullName}
+                    onChangeText={setFullName}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                    testID="input-fullname"
+                  />
+                </View>
+
+                {signupMethod === 'email' ? (
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Email</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="you@example.com"
+                      placeholderTextColor={Colors.textMuted}
+                      value={email}
+                      onChangeText={setEmail}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      autoComplete="email"
+                      returnKeyType="next"
+                      testID="input-signup-email"
+                    />
+                  </View>
+                ) : (
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Phone Number</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="+1 (555) 123-4567"
+                      placeholderTextColor={Colors.textMuted}
+                      value={phone}
+                      onChangeText={setPhone}
+                      keyboardType="phone-pad"
+                      returnKeyType="next"
+                      testID="input-signup-phone"
+                    />
+                  </View>
+                )}
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Password</Text>
+                  <View style={styles.passwordWrap}>
+                    <TextInput
+                      style={[styles.input, styles.passwordInput]}
+                      placeholder="Min. 6 characters"
+                      placeholderTextColor={Colors.textMuted}
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      returnKeyType="next"
+                      onSubmitEditing={() => confirmRef.current?.focus()}
+                      testID="input-password"
+                    />
+                    <Pressable
+                      onPress={() => setShowPassword((s) => !s)}
+                      style={styles.eyeBtn}
+                      hitSlop={10}
+                    >
+                      {showPassword ? (
+                        <EyeOff color={Colors.textMuted} size={18} />
+                      ) : (
+                        <Eye color={Colors.textMuted} size={18} />
+                      )}
+                    </Pressable>
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Confirm Password</Text>
+                  <TextInput
+                    ref={confirmRef}
+                    style={styles.input}
+                    placeholder="Re-enter password"
+                    placeholderTextColor={Colors.textMuted}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showPassword}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSignupStep1}
+                    testID="input-confirm-password"
+                  />
+                </View>
+
+                <Pressable
+                  onPress={handleSignupStep1}
+                  style={({ pressed }) => [
+                    styles.submitBtn,
+                    pressed && styles.submitBtnPressed,
+                  ]}
+                  testID="signup-next-btn"
+                >
+                  <Text style={styles.submitBtnText}>Continue</Text>
+                  <ShieldCheck color={Colors.black} size={18} />
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <View style={styles.verifyHeader}>
+                  <View style={styles.verifyIconWrap}>
+                    <ShieldCheck color={Colors.accent} size={28} />
+                  </View>
+                  <Text style={styles.formTitle}>Verify Your Account</Text>
+                  <Text style={styles.formSubtitle}>
+                    Enter the 6-digit code sent to{'\n'}
+                    <Text style={styles.verifyTarget}>
+                      {signupMethod === 'email' ? email : phone}
+                    </Text>
                   </Text>
-                  {mode === 'login' ? (
-                    <ArrowRight color={Colors.black} size={18} />
+                </View>
+
+                {error && (
+                  <View style={styles.errorBanner}>
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                )}
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Verification Code</Text>
+                  <TextInput
+                    style={[styles.input, styles.codeInput]}
+                    placeholder="000000"
+                    placeholderTextColor={Colors.textMuted}
+                    value={verificationCode}
+                    onChangeText={(t) => setVerificationCode(t.replace(/\D/g, '').slice(0, 6))}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    returnKeyType="done"
+                    onSubmitEditing={handleVerifyAndSignup}
+                    testID="input-verification-code"
+                  />
+                </View>
+
+                <Pressable
+                  onPress={handleVerifyAndSignup}
+                  style={({ pressed }) => [
+                    styles.submitBtn,
+                    isSubmitting && styles.submitBtnDisabled,
+                    pressed && !isSubmitting && styles.submitBtnPressed,
+                  ]}
+                  disabled={isSubmitting}
+                  testID="verify-btn"
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color={Colors.black} size="small" />
                   ) : (
-                    <UserPlus color={Colors.black} size={18} />
+                    <>
+                      <Text style={styles.submitBtnText}>Verify & Create Account</Text>
+                      <UserPlus color={Colors.black} size={18} />
+                    </>
                   )}
-                </>
-              )}
-            </Pressable>
+                </Pressable>
+
+                <View style={styles.resendRow}>
+                  <Text style={styles.resendText}>Didn't receive the code?</Text>
+                  <Pressable onPress={handleResendCode} hitSlop={8}>
+                    <Text style={styles.resendLink}>Resend</Text>
+                  </Pressable>
+                </View>
+
+                <Pressable onPress={() => { setSignupStep('info'); setError(null); }} style={styles.backToInfoBtn}>
+                  <Text style={styles.backToInfoText}>Back to account details</Text>
+                </Pressable>
+              </>
+            )}
 
             <Pressable onPress={toggleMode} style={styles.switchBtn} testID="switch-mode-btn">
               <Text style={styles.switchText}>
@@ -359,45 +544,11 @@ const styles = StyleSheet.create({
   },
   brandSection: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 36,
   },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-  },
-  logoMark: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: Colors.accentMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.accentBorder,
-  },
-  brandName: {
-    fontSize: 28,
-    fontWeight: '800' as const,
-    color: Colors.text,
-    letterSpacing: 3,
-  },
-  taglineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  decorLine: {
-    height: 1,
-    backgroundColor: Colors.accent,
-    opacity: 0.4,
-  },
-  tagline: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    letterSpacing: 3,
-    fontWeight: '500' as const,
+  logoImage: {
+    width: SCREEN_WIDTH * 0.5,
+    height: 80,
   },
   formCard: {
     width: '100%',
@@ -417,6 +568,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     marginBottom: 24,
+  },
+  verifyHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  verifyIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.accentMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  verifyTarget: {
+    color: Colors.accent,
+    fontWeight: '600' as const,
+  },
+  methodToggle: {
+    flexDirection: 'row',
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    padding: 3,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  methodBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  methodBtnActive: {
+    backgroundColor: Colors.accent,
+  },
+  methodBtnText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: Colors.textMuted,
+  },
+  methodBtnTextActive: {
+    color: Colors.black,
   },
   errorBanner: {
     backgroundColor: Colors.errorMuted,
@@ -453,6 +650,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  codeInput: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    textAlign: 'center' as const,
+    letterSpacing: 8,
+  },
   passwordWrap: {
     position: 'relative' as const,
   },
@@ -487,6 +690,31 @@ const styles = StyleSheet.create({
     color: Colors.black,
     fontSize: 16,
     fontWeight: '700' as const,
+  },
+  resendRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 6,
+    marginTop: 20,
+  },
+  resendText: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+  },
+  resendLink: {
+    color: Colors.accent,
+    fontSize: 13,
+    fontWeight: '700' as const,
+  },
+  backToInfoBtn: {
+    alignItems: 'center' as const,
+    marginTop: 12,
+    paddingVertical: 8,
+  },
+  backToInfoText: {
+    color: Colors.textMuted,
+    fontSize: 13,
   },
   switchBtn: {
     marginTop: 20,

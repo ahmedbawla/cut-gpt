@@ -13,12 +13,14 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Scissors, Eye, EyeOff, ArrowRight, UserPlus, ArrowLeft, MapPin, DollarSign, Plus, X, Check } from 'lucide-react-native';
+import { Eye, EyeOff, ArrowRight, UserPlus, ArrowLeft, MapPin, DollarSign, Plus, X, Check } from 'lucide-react-native';
+import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useBarbers } from '@/hooks/useBarbers';
 import { HAIRCUTS } from '@/constants/haircuts';
 import { BarberService } from '@/constants/barbers';
+import LocationSearchComponent from '@/components/LocationSearch';
 
 type AuthMode = 'login' | 'signup';
 type SignupStep = 'credentials' | 'profile' | 'services';
@@ -148,10 +150,11 @@ export default function BarberLoginScreen() {
           </Pressable>
 
           <Animated.View style={[styles.logoSection, { transform: [{ scale: logoScale }] }]}>
-            <View style={styles.logoCircle}>
-              <Scissors color={Colors.teal} size={28} />
-            </View>
-            <Text style={styles.appName}>CUT-GPT</Text>
+            <Image
+              source={require('@/assets/images/cuttr-logo.png')}
+              style={{ width: 140, height: 48 }}
+              contentFit="contain"
+            />
             <Text style={styles.appTagline}>Barber Portal</Text>
           </Animated.View>
 
@@ -234,10 +237,12 @@ export default function BarberLoginScreen() {
                     </View>
                     <View style={styles.inputGroup}>
                       <Text style={styles.inputLabel}>Shop Location</Text>
-                      <View style={styles.locationRow}>
-                        <MapPin color={Colors.teal} size={16} />
-                        <TextInput style={[styles.input, { flex: 1 }]} placeholder="123 Main St, City, State ZIP" placeholderTextColor={Colors.textMuted} value={address} onChangeText={setAddress} testID="barber-address" />
-                      </View>
+                      <LocationSearchComponent
+                        value={address}
+                        onSelect={(loc) => setAddress(loc.address)}
+                        placeholder="Start typing your address..."
+                        testID="barber-address"
+                      />
                     </View>
                     <View style={styles.stepButtons}>
                       <Pressable onPress={() => setSignupStep('credentials')} style={styles.backStepBtn}>

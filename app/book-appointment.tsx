@@ -61,11 +61,25 @@ export default function BookAppointmentScreen() {
   const { user } = useAuth();
 
   const barber = barbers.find((b) => b.id === barberId);
-  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(
-    haircutName
-      ? barber?.services.find((s) => s.haircutName.toLowerCase() === haircutName?.toLowerCase())?.haircutId ?? null
-      : null
-  );
+
+  const matchedServiceId = useMemo(() => {
+    if (!haircutName || !barber) return null;
+    const exact = barber.services.find((s) => s.haircutName.toLowerCase() === haircutName.toLowerCase());
+    if (exact) return exact.haircutId;
+    const partial = barber.services.find((s) => 
+      s.haircutName.toLowerCase().includes(haircutName.toLowerCase()) ||
+      haircutName.toLowerCase().includes(s.haircutName.toLowerCase())
+    );
+    return partial?.haircutId ?? null;
+  }, [haircutName, barber]);
+
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (matchedServiceId && !selectedServiceId) {
+      setSelectedServiceId(matchedServiceId);
+    }
+  }, [matchedServiceId]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isBooked, setIsBooked] = useState(false);
@@ -113,6 +127,7 @@ export default function BookAppointmentScreen() {
         customerId: user.id,
         customerName: user.fullName,
         customerEmail: user.email,
+        customerAvatarUrl: user.avatarUrl,
         haircutName: selectedService.haircutName,
         rate: selectedService.rate,
         date: selectedDate,

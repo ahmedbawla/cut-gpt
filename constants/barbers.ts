@@ -31,11 +31,12 @@ export interface Appointment {
   customerId: string;
   customerName: string;
   customerEmail: string;
+  customerAvatarUrl?: string | null;
   haircutName: string;
   rate: number;
   date: string;
   time: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'declined';
   createdAt: string;
   frontImage?: string;
   angleImages?: string[];
@@ -44,7 +45,7 @@ export interface Appointment {
 export interface BarberNotification {
   id: string;
   barberId: string;
-  type: 'new_booking' | 'cancellation';
+  type: 'new_booking' | 'cancellation' | 'decline';
   title: string;
   message: string;
   appointmentId: string;

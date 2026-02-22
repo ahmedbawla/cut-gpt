@@ -37,6 +37,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     } else if (isAuthenticated && inAuthRoute) {
       console.log("[Auth] Authenticated, redirecting to home");
       router.replace("/" as any);
+    } else if (isBarberAuthed && inAuthRoute) {
+      console.log("[Auth] Barber authenticated, redirecting to dashboard");
+      router.replace("/barber-dashboard" as any);
     }
   }, [isAuthenticated, isLoading, segments, barberAuth.isAuthenticated]);
 
@@ -96,6 +99,13 @@ function RootLayoutNav() {
           options={{
             headerShown: true,
             title: "Book Appointment",
+          }}
+        />
+        <Stack.Screen
+          name="user-appointments"
+          options={{
+            headerShown: true,
+            title: "My Appointments",
           }}
         />
       </Stack>

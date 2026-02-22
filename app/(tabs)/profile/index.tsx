@@ -25,135 +25,37 @@ import {
   X,
   Scissors,
   ChevronRight,
-  Clock,
-  MapPin,
-  DollarSign,
-  XCircle,
-  AlertTriangle,
+  BookmarkCheck,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/colors';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedLooks } from '@/hooks/useSavedLooks';
 import { useBarbers } from '@/hooks/useBarbers';
-import { Appointment } from '@/constants/barbers';
-
-function canCancelAppointment(apt: Appointment): boolean {
-  try {
-    const [year, month, day] = apt.date.split('-').map(Number);
-    const timeParts = apt.time.match(/(\d+):(\d+)\s*(AM|PM)/i);
-    if (!timeParts) return false;
-    let hours = parseInt(timeParts[1], 10);
-    const minutes = parseInt(timeParts[2], 10);
-    const ampm = timeParts[3].toUpperCase();
-    if (ampm === 'PM' && hours !== 12) hours += 12;
-    if (ampm === 'AM' && hours === 12) hours = 0;
-    const aptDate = new Date(year, month - 1, day, hours, minutes);
-    const now = new Date();
-    const diffMs = aptDate.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-    return diffHours > 24;
-  } catch {
-    return false;
-  }
-}
-
-function ClientAppointmentCard({ apt, onCancel }: { apt: Appointment; onCancel: (id: string) => void }) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const isCancellable = canCancelAppointment(apt);
-  const isCancelled = apt.status === 'cancelled';
-  const isCompleted = apt.status === 'completed';
-
-  const handleCancel = useCallback(() => {
-    if (!isCancellable) {
-      Alert.alert('Cannot Cancel', 'Appointments can only be cancelled more than 24 hours in advance.');
-      return;
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      'Cancel Appointment',
-      `Cancel your ${apt.haircutName} appointment with ${apt.barberName}?`,
-      [
-        { text: 'Keep', style: 'cancel' },
-        { text: 'Cancel It', style: 'destructive', onPress: () => onCancel(apt.id) },
-      ]
-    );
-  }, [apt, isCancellable, onCancel]);
-
-  const statusColor = isCancelled ? Colors.error : isCompleted ? Colors.teal : Colors.success;
-  const statusBg = isCancelled ? Colors.errorMuted : isCompleted ? Colors.tealMuted : Colors.successMuted;
-
-  return (
-    <Animated.View style={[aptStyles.card, { transform: [{ scale: scaleAnim }] }, isCancelled && { opacity: 0.5 }]}>
-      <View style={aptStyles.cardTop}>
-        <View style={aptStyles.cardInfo}>
-          <Text style={aptStyles.cardService}>{apt.haircutName}</Text>
-          <View style={aptStyles.cardRow}>
-            <Scissors color={Colors.textMuted} size={11} />
-            <Text style={aptStyles.cardBarber}>{apt.barberName}</Text>
-          </View>
-          <View style={aptStyles.cardRow}>
-            <Calendar color={Colors.textMuted} size={11} />
-            <Text style={aptStyles.cardDate}>{apt.date}</Text>
-            <Clock color={Colors.textMuted} size={11} />
-            <Text style={aptStyles.cardDate}>{apt.time}</Text>
-          </View>
-        </View>
-        <View style={aptStyles.cardRight}>
-          <View style={[aptStyles.statusBadge, { backgroundColor: statusBg }]}>
-            <Text style={[aptStyles.statusText, { color: statusColor }]}>{apt.status}</Text>
-          </View>
-          <Text style={aptStyles.cardRate}>${apt.rate}</Text>
-        </View>
-      </View>
-      {!isCancelled && !isCompleted && (
-        <Pressable
-          onPress={handleCancel}
-          style={[aptStyles.cancelBtn, !isCancellable && aptStyles.cancelBtnDisabled]}
-        >
-          {isCancellable ? (
-            <>
-              <XCircle color={Colors.error} size={14} />
-              <Text style={aptStyles.cancelBtnText}>Cancel Appointment</Text>
-            </>
-          ) : (
-            <>
-              <AlertTriangle color={Colors.textMuted} size={14} />
-              <Text style={[aptStyles.cancelBtnText, { color: Colors.textMuted }]}>Cancel unavailable (&lt;24h)</Text>
-            </>
-          )}
-        </Pressable>
-      )}
-    </Animated.View>
-  );
-}
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout, updateProfile, isLoading } = useAuth();
   const { looks } = useSavedLooks();
-  const { getCustomerAppointments, cancelAppointment } = useBarbers();
+  const { getCustomerAppointments } = useBarbers();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(user?.fullName ?? '');
   const [isUpdating, setIsUpdating] = useState(false);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const customerAppointments = useMemo(() => {
-    if (!user) return [];
-    return getCustomerAppointments(user.id).sort((a, b) => {
-      if (a.status === 'cancelled' && b.status !== 'cancelled') return 1;
-      if (a.status !== 'cancelled' && b.status === 'cancelled') return -1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+  const upcomingCount = useMemo(() => {
+    if (!user) return 0;
+    const apts = getCustomerAppointments(user.id);
+    return apts.filter((a) => {
+      if (a.status === 'cancelled' || a.status === 'completed' || a.status === 'declined') return false;
+      try {
+        const [year, month, day] = a.date.split('-').map(Number);
+        const aptDate = new Date(year, month - 1, day, 23, 59, 59);
+        return aptDate.getTime() >= Date.now();
+      } catch { return false; }
+    }).length;
   }, [user, getCustomerAppointments]);
-
-  const upcomingCount = useMemo(() => customerAppointments.filter((a) => a.status !== 'cancelled' && a.status !== 'completed').length, [customerAppointments]);
-
-  const handleCancelAppointment = useCallback((id: string) => {
-    cancelAppointment(id);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  }, [cancelAppointment]);
 
   const handlePickAvatar = useCallback(async () => {
     try {
@@ -203,9 +105,9 @@ export default function ProfileScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: () => { logout(); router.replace('/login' as any); } },
+      { text: 'Sign Out', style: 'destructive', onPress: () => { logout(); } },
     ]);
-  }, [logout, router]);
+  }, [logout]);
 
   const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, speed: 50, bounciness: 4 }).start();
@@ -271,28 +173,31 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <View style={styles.statIconWrap}><Scissors color={Colors.accent} size={16} /></View>
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push('/(tabs)/saved' as any);
+          }}
+          style={styles.statCard}
+        >
+          <View style={styles.statIconWrap}><BookmarkCheck color={Colors.accent} size={16} /></View>
           <Text style={styles.statNumber}>{looks.length}</Text>
           <Text style={styles.statLabel}>Saved Looks</Text>
-        </View>
-        <View style={styles.statCard}>
+          <ChevronRight color={Colors.textDim} size={14} style={styles.statArrow} />
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push('/user-appointments' as any);
+          }}
+          style={styles.statCard}
+        >
           <View style={[styles.statIconWrap, { backgroundColor: Colors.tealMuted }]}><Calendar color={Colors.teal} size={16} /></View>
           <Text style={styles.statNumber}>{upcomingCount}</Text>
           <Text style={styles.statLabel}>Appointments</Text>
-        </View>
+          <ChevronRight color={Colors.textDim} size={14} style={styles.statArrow} />
+        </Pressable>
       </View>
-
-      {customerAppointments.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>YOUR APPOINTMENTS</Text>
-          <View style={styles.appointmentsList}>
-            {customerAppointments.map((apt) => (
-              <ClientAppointmentCard key={apt.id} apt={apt} onCancel={handleCancelAppointment} />
-            ))}
-          </View>
-        </View>
-      )}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>ACCOUNT</Text>
@@ -305,7 +210,6 @@ export default function ProfileScreen() {
                 <Text style={styles.menuItemValue}>{user.fullName}</Text>
               </View>
             </View>
-            <ChevronRight color={Colors.textDim} size={16} />
           </View>
           <View style={styles.menuDivider} />
           <View style={styles.menuItem}>
@@ -337,88 +241,10 @@ export default function ProfileScreen() {
         </Pressable>
       </Animated.View>
 
-      <Text style={styles.versionText}>Cut-GPT v1.0.0</Text>
+      <Text style={styles.versionText}>Cuttr v1.0.0</Text>
     </ScrollView>
   );
 }
-
-const aptStyles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: 10,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  cardInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  cardService: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: Colors.text,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  cardBarber: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '500' as const,
-  },
-  cardDate: {
-    fontSize: 11,
-    color: Colors.textMuted,
-  },
-  cardRight: {
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '700' as const,
-    textTransform: 'capitalize' as const,
-  },
-  cardRate: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: Colors.accent,
-  },
-  cancelBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: Colors.errorMuted,
-    borderWidth: 1,
-    borderColor: Colors.errorBorder,
-  },
-  cancelBtnDisabled: {
-    backgroundColor: Colors.card,
-    borderColor: Colors.border,
-  },
-  cancelBtnText: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: Colors.error,
-  },
-});
 
 const styles = StyleSheet.create({
   container: {
@@ -537,6 +363,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
+    position: 'relative',
   },
   statIconWrap: {
     width: 36,
@@ -559,6 +386,11 @@ const styles = StyleSheet.create({
     fontWeight: '500' as const,
     letterSpacing: 0.3,
   },
+  statArrow: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+  },
   section: {
     marginBottom: 24,
   },
@@ -569,9 +401,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 10,
     marginLeft: 4,
-  },
-  appointmentsList: {
-    gap: 0,
   },
   menuCard: {
     backgroundColor: Colors.surface,

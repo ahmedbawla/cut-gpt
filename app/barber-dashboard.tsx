@@ -52,6 +52,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import Colors from '@/constants/colors';
 import { useBarbers } from '@/hooks/useBarbers';
+import LocationSearchComponent from '@/components/LocationSearch';
 import { Appointment, BarberService } from '@/constants/barbers';
 import { HAIRCUTS } from '@/constants/haircuts';
 
@@ -155,7 +156,7 @@ interface AppointmentCardProps {
   onDelete?: (id: string) => void;
 }
 
-const AppointmentCard = React.memo(({ apt, isBarber, onComplete, onCancel, onDelete }: AppointmentCardProps) => {
+const AppointmentCard = React.memo(({ apt, isBarber, onComplete, onCancel, onDelete, onDecline }: AppointmentCardProps & { onDecline?: (id: string) => void }) => {
   const [expanded, setExpanded] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const heightAnim = useRef(new Animated.Value(0)).current;
@@ -197,17 +198,29 @@ const AppointmentCard = React.memo(({ apt, isBarber, onComplete, onCancel, onDel
     ]);
   }, [apt, onDelete]);
 
-  const statusColor = apt.status === 'confirmed' ? Colors.success : apt.status === 'completed' ? Colors.teal : apt.status === 'cancelled' ? Colors.error : Colors.accent;
-  const statusBg = apt.status === 'confirmed' ? Colors.successMuted : apt.status === 'completed' ? Colors.tealMuted : apt.status === 'cancelled' ? Colors.errorMuted : Colors.accentMuted;
+  const canDecline = isBarber && apt.status === 'confirmed' && (() => {
+    try {
+      const bookedAt = new Date(apt.createdAt).getTime();
+      const now = Date.now();
+      return (now - bookedAt) <= 60 * 60 * 1000;
+    } catch { return false; }
+  })();
+
+  const statusColor = apt.status === 'confirmed' ? Colors.success : apt.status === 'completed' ? Colors.teal : apt.status === 'cancelled' || apt.status === 'declined' ? Colors.error : Colors.accent;
+  const statusBg = apt.status === 'confirmed' ? Colors.successMuted : apt.status === 'completed' ? Colors.tealMuted : apt.status === 'cancelled' || apt.status === 'declined' ? Colors.errorMuted : Colors.accentMuted;
 
   return (
     <View style={[styles.appointmentCard, apt.status === 'cancelled' && { opacity: 0.6 }]}>
       <Pressable onPress={hasImages ? toggleExpand : undefined} style={styles.appointmentCardInner}>
         <View style={styles.appointmentTop}>
           <View style={styles.appointmentLeft}>
-            <View style={styles.clientIconWrap}>
-              <User color={Colors.accent} size={14} />
-            </View>
+            {apt.customerAvatarUrl ? (
+              <Image source={{ uri: apt.customerAvatarUrl }} style={styles.clientAvatar} contentFit="cover" />
+            ) : (
+              <View style={styles.clientIconWrap}>
+                <User color={Colors.accent} size={14} />
+              </View>
+            )}
             <Text style={styles.appointmentClient}>{apt.customerName}</Text>
           </View>
           <View style={{ flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6 }}>
@@ -242,6 +255,18 @@ const AppointmentCard = React.memo(({ apt, isBarber, onComplete, onCancel, onDel
               <CheckCircle color={Colors.black} size={14} />
               <Text style={styles.actionBtnText}>Complete</Text>
             </Pressable>
+            {canDecline && (
+              <Pressable onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                Alert.alert('Decline Appointment', `Decline ${apt.customerName}'s appointment? You can only decline within 1 hour of booking.`, [
+                  { text: 'Keep', style: 'cancel' },
+                  { text: 'Decline', style: 'destructive', onPress: () => { onDecline?.(apt.id); setShowActions(false); } },
+                ]);
+              }} style={styles.actionBtnCancel}>
+                <XCircle color={Colors.error} size={14} />
+                <Text style={[styles.actionBtnText, { color: Colors.error }]}>Decline</Text>
+              </Pressable>
+            )}
             <Pressable onPress={handleCancel} style={styles.actionBtnCancel}>
               <XCircle color={Colors.error} size={14} />
               <Text style={[styles.actionBtnText, { color: Colors.error }]}>Cancel</Text>
@@ -628,10 +653,18 @@ function CalendarView({ appointments, year, month, onComplete, onCancel, onDelet
 function AppointmentsTab({ barber }: {
   barber: NonNullable<ReturnType<typeof useBarbers>['barberAuth']['barber']>;
 }) {
-  const { getBarberAppointments, getBarberNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead, updateAppointment, cancelAppointment, deleteAppointment } = useBarbers();
+  const { getBarberAppointments, getBarberNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead, updateAppointment, cancelAppointment, deleteAppointment, declineAppointment } = useBarbers();
   const appointments = getBarberAppointments(barber.id);
   const allAppointments = useBarbers().appointments.filter((a) => a.barberId === barber.id);
-  const upcomingAppointments = allAppointments.filter((a) => a.status !== 'completed' && a.status !== 'cancelled');
+  const upcomingAppointments = allAppointments.filter((a) => {
+    if (a.status === 'completed' || a.status === 'cancelled' || a.status === 'declined') return false;
+    try {
+      const [year, month, day] = a.date.split('-').map(Number);
+      const aptDate = new Date(year, month - 1, day, 23, 59, 59);
+      if (aptDate.getTime() < Date.now()) return false;
+    } catch { return false; }
+    return true;
+  });
   const barberNotifications = getBarberNotifications(barber.id);
   const unreadCount = getUnreadCount(barber.id);
 
@@ -652,6 +685,14 @@ function AppointmentsTab({ barber }: {
     deleteAppointment(id);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }, [deleteAppointment]);
+
+  const handleDecline = useCallback((id: string) => {
+    declineAppointment(id).then(() => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }).catch((err: Error) => {
+      Alert.alert('Cannot Decline', err.message);
+    });
+  }, [declineAppointment]);
 
   const goToPrevMonth = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -728,7 +769,7 @@ function AppointmentsTab({ barber }: {
           ) : (
             <View style={styles.appointmentsList}>
               {upcomingAppointments.map((apt) => (
-                <AppointmentCard key={apt.id} apt={apt} isBarber onComplete={handleComplete} onCancel={handleCancel} onDelete={handleDelete} />
+                <AppointmentCard key={apt.id} apt={apt} isBarber onComplete={handleComplete} onCancel={handleCancel} onDelete={handleDelete} onDecline={handleDecline} />
               ))}
             </View>
           )}
@@ -811,8 +852,8 @@ function ProfileTab({ barber, onUpdateProfile, onUpdateServices, isSaving }: {
 
   if (isEditing) {
     return (
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.tabContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 120 : 0}>
+        <ScrollView contentContainerStyle={styles.tabContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic">
           <View style={styles.editHeader}>
             <Text style={styles.tabHeaderTitle}>Edit Profile</Text>
             <View style={styles.editHeaderActions}>
@@ -834,12 +875,16 @@ function ProfileTab({ barber, onUpdateProfile, onUpdateServices, isSaving }: {
             <Text style={styles.editLabel}>BIO</Text>
             <TextInput style={[styles.editInput, styles.editBioInput]} value={editBio} onChangeText={setEditBio} placeholder="Tell clients about yourself..." placeholderTextColor={Colors.textMuted} multiline testID="edit-barber-bio" />
           </View>
-          <View style={styles.editSection}>
+          <View style={[styles.editSection, { zIndex: 100 }]}>
             <Text style={styles.editLabel}>LOCATION</Text>
-            <View style={styles.editLocationRow}>
-              <MapPin color={Colors.teal} size={16} />
-              <TextInput style={[styles.editInput, { flex: 1 }]} value={editAddress} onChangeText={setEditAddress} placeholder="123 Main St, City, State ZIP" placeholderTextColor={Colors.textMuted} testID="edit-barber-address" />
-            </View>
+            <LocationSearchComponent
+              value={editAddress}
+              onSelect={(loc) => {
+                setEditAddress(loc.address);
+              }}
+              placeholder="Start typing your address..."
+              testID="edit-barber-address"
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -900,7 +945,7 @@ function ProfileTab({ barber, onUpdateProfile, onUpdateServices, isSaving }: {
         <LogOut color={Colors.error} size={18} />
         <Text style={styles.logoutText}>Sign Out</Text>
       </Pressable>
-      <Text style={styles.versionText}>Cut-GPT Barber v1.0.0</Text>
+      <Text style={styles.versionText}>Cuttr Barber v1.0.0</Text>
     </ScrollView>
   );
 }
@@ -963,7 +1008,7 @@ export default function BarberDashboardScreen() {
           headerTintColor: Colors.text,
           headerShadowVisible: false,
           headerLeft: () => (
-            <Text style={styles.headerTitle}>Cut-GPT <Text style={styles.headerTitleAccent}>Pro</Text></Text>
+            <Image source={require('@/assets/images/cuttr-logo.png')} style={{ width: 90, height: 28 }} contentFit="contain" />
           ),
         }}
       />
@@ -1005,10 +1050,10 @@ const imgStyles = StyleSheet.create({
 });
 
 const calStyles = StyleSheet.create({
-  monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, paddingHorizontal: 4 },
+  monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 16, paddingHorizontal: 4, gap: 20 },
   monthNavBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
   monthTitle: { fontSize: 17, fontWeight: '700' as const, color: Colors.text },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
   dayHeader: { width: `${100 / 7}%` as any, alignItems: 'center', paddingVertical: 8 },
   dayHeaderText: { fontSize: 11, fontWeight: '600' as const, color: Colors.textMuted, letterSpacing: 0.5 },
   dayCell: { width: `${100 / 7}%` as any, alignItems: 'center', paddingVertical: 6, minHeight: 52 },
@@ -1124,6 +1169,7 @@ const styles = StyleSheet.create({
   appointmentTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   appointmentLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   clientIconWrap: { width: 30, height: 30, borderRadius: 15, backgroundColor: Colors.accentMuted, alignItems: 'center', justifyContent: 'center' },
+  clientAvatar: { width: 30, height: 30, borderRadius: 15, borderWidth: 1, borderColor: Colors.accent },
   appointmentClient: { color: Colors.text, fontSize: 14, fontWeight: '600' as const },
   hasImagesBadge: { width: 22, height: 22, borderRadius: 6, backgroundColor: Colors.tealMuted, alignItems: 'center', justifyContent: 'center' },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
