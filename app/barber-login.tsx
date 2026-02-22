@@ -182,8 +182,8 @@ export default function BarberLoginScreen() {
                 </View>
 
                 <Pressable onPress={handleLogin} style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]} disabled={isSubmitting} testID="barber-login-btn">
-                  {isSubmitting ? <ActivityIndicator color={Colors.black} size="small" /> : (
-                    <><Text style={styles.submitBtnText}>Sign In</Text><ArrowRight color={Colors.black} size={18} /></>
+                  {isSubmitting ? <ActivityIndicator color={Colors.white} size="small" /> : (
+                    <><Text style={styles.submitBtnText}>Sign In</Text><ArrowRight color={Colors.white} size={18} /></>
                   )}
                 </Pressable>
               </>
@@ -224,7 +224,7 @@ export default function BarberLoginScreen() {
                     </View>
                     <Pressable onPress={handleNextStep} style={styles.submitBtn} testID="barber-next-step">
                       <Text style={styles.submitBtnText}>Next</Text>
-                      <ArrowRight color={Colors.black} size={18} />
+                      <ArrowRight color={Colors.white} size={18} />
                     </Pressable>
                   </>
                 )}
@@ -251,7 +251,7 @@ export default function BarberLoginScreen() {
                       </Pressable>
                       <Pressable onPress={handleNextStep} style={[styles.submitBtn, { flex: 1 }]}>
                         <Text style={styles.submitBtnText}>Next</Text>
-                        <ArrowRight color={Colors.black} size={18} />
+                        <ArrowRight color={Colors.white} size={18} />
                       </Pressable>
                     </View>
                   </>
@@ -287,8 +287,8 @@ export default function BarberLoginScreen() {
                         <Text style={styles.backStepText}>Back</Text>
                       </Pressable>
                       <Pressable onPress={handleSignup} style={[styles.submitBtn, { flex: 1 }, isSubmitting && styles.submitBtnDisabled]} disabled={isSubmitting}>
-                        {isSubmitting ? <ActivityIndicator color={Colors.black} size="small" /> : (
-                          <><Text style={styles.submitBtnText}>Create Account</Text><UserPlus color={Colors.black} size={18} /></>
+                        {isSubmitting ? <ActivityIndicator color={Colors.white} size="small" /> : (
+                          <><Text style={styles.submitBtnText}>Create Account</Text><UserPlus color={Colors.white} size={18} /></>
                         )}
                       </Pressable>
                     </View>
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   submitBtn: { backgroundColor: Colors.teal, borderRadius: 12, paddingVertical: 16, flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'center' as const, gap: 8, marginTop: 8 },
   submitBtnDisabled: { opacity: 0.5 },
-  submitBtnText: { color: Colors.black, fontSize: 16, fontWeight: '700' as const },
+  submitBtnText: { color: Colors.white, fontSize: 16, fontWeight: '700' as const },
   switchBtn: { marginTop: 24, alignItems: 'center' as const, paddingVertical: 8 },
   switchText: { color: Colors.textSecondary, fontSize: 13 },
   switchTextAccent: { color: Colors.teal, fontWeight: '700' as const },

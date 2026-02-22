@@ -231,7 +231,7 @@ const BarberCard = React.memo(({
           style={({ pressed }) => [styles.bookBtn, pressed && styles.bookBtnPressed]}
           testID={`book-${barber.id}`}
         >
-          <Calendar color={Colors.black} size={16} />
+          <Calendar color={Colors.white} size={16} />
           <Text style={styles.bookBtnText}>Book Appointment</Text>
         </Pressable>
       </Pressable>
@@ -283,6 +283,7 @@ const styles = StyleSheet.create({
   serviceChipText: { color: Colors.textSecondary, fontSize: 11, fontWeight: '500' as const },
   serviceChipRate: { color: Colors.accent, fontSize: 11, fontWeight: '700' as const },
   bookBtn: { backgroundColor: Colors.accent, borderRadius: 12, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  bookBtnText: { color: Colors.white, fontSize: 15, fontWeight: '700' as const },
   bookBtnPressed: { opacity: 0.85 },
-  bookBtnText: { color: Colors.black, fontSize: 15, fontWeight: '700' as const },
+
 });

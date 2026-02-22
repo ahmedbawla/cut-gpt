@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { StatusBar } from "expo-status-bar";
 import { SavedLooksProvider } from "@/hooks/useSavedLooks";
 import { FavoritesProvider } from "@/hooks/useFavorites";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
@@ -125,6 +126,7 @@ export default function RootLayout() {
           <BarbersProvider>
             <FavoritesProvider>
               <SavedLooksProvider>
+                <StatusBar style="dark" />
                 <RootLayoutNav />
               </SavedLooksProvider>
             </FavoritesProvider>

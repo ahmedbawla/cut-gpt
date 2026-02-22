@@ -191,7 +191,7 @@ export default function MultiAngleViewer({ views, onSavePhoto }: MultiAngleViewe
               hitSlop={12}
               testID="save-angle-btn"
             >
-              <Save color={Colors.black} size={14} />
+              <Save color={Colors.white} size={14} />
             </Pressable>
           )}
         </View>
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   badge360Text: {
-    color: Colors.black,
+    color: Colors.white,
     fontSize: 10,
     fontWeight: '800' as const,
     letterSpacing: 0.5,

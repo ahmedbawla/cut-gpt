@@ -139,7 +139,7 @@ const AppointmentImageViewer = React.memo(({ angleImages }: { angleImages: strin
           ))}
         </View>
         <Pressable onPress={togglePlayback} style={imgStyles.playBtn} hitSlop={8}>
-          {isPlaying ? <Pause color={Colors.black} size={14} /> : <Play color={Colors.black} size={14} />}
+          {isPlaying ? <Pause color={Colors.white} size={14} /> : <Play color={Colors.white} size={14} />}
           <Text style={imgStyles.playText}>{isPlaying ? 'Pause' : '360° View'}</Text>
         </Pressable>
       </View>
@@ -252,7 +252,7 @@ const AppointmentCard = React.memo(({ apt, isBarber, onComplete, onCancel, onDel
         {showActions && isBarber && (
           <View style={styles.actionRow}>
             <Pressable onPress={handleComplete} style={styles.actionBtnComplete}>
-              <CheckCircle color={Colors.black} size={14} />
+              <CheckCircle color={Colors.white} size={14} />
               <Text style={styles.actionBtnText}>Complete</Text>
             </Pressable>
             {canDecline && (
@@ -373,7 +373,7 @@ const ServiceEditor = React.memo(({ service, onUpdate, onRemove }: ServiceEditor
             <Text style={styles.serviceEditCancelText}>Cancel</Text>
           </Pressable>
           <Pressable onPress={handleSave} style={styles.serviceEditSaveBtn}>
-            <Check color={Colors.black} size={16} />
+            <Check color={Colors.white} size={16} />
             <Text style={styles.serviceEditSaveText}>Save</Text>
           </Pressable>
         </View>
@@ -501,7 +501,7 @@ function AddServiceModal({ visible, existingServiceIds, onAdd, onClose }: {
                     <Text style={modalStyles.backBtnText}>Back</Text>
                   </Pressable>
                   <Pressable onPress={handleAdd} style={modalStyles.addBtn}>
-                    <Plus color={Colors.black} size={16} />
+                    <Plus color={Colors.white} size={16} />
                     <Text style={modalStyles.addBtnText}>Add Service</Text>
                   </Pressable>
                 </View>
@@ -549,7 +549,7 @@ function ServicesView({ barber, onUpdateServices, onBack }: {
           <Text style={styles.tabHeaderSub}>{barber.services.length} services offered</Text>
         </View>
         <Pressable onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowAddModal(true); }} style={styles.addServiceBtn} testID="add-service-btn">
-          <Plus color={Colors.black} size={16} />
+          <Plus color={Colors.white} size={16} />
           <Text style={styles.addServiceBtnText}>Add</Text>
         </Pressable>
       </View>
@@ -859,7 +859,7 @@ function ProfileTab({ barber, onUpdateProfile, onUpdateServices, isSaving }: {
             <View style={styles.editHeaderActions}>
               <Pressable onPress={handleCancel} style={styles.editCancelBtn}><X color={Colors.textSecondary} size={18} /></Pressable>
               <Pressable onPress={handleSave} style={styles.editSaveBtn} disabled={isSaving}>
-                {isSaving ? <ActivityIndicator color={Colors.black} size="small" /> : <><Save color={Colors.black} size={16} /><Text style={styles.editSaveBtnText}>Save</Text></>}
+                {isSaving ? <ActivityIndicator color={Colors.white} size="small" /> : <><Save color={Colors.white} size={16} /><Text style={styles.editSaveBtnText}>Save</Text></>}
               </Pressable>
             </View>
           </View>
@@ -901,7 +901,7 @@ function ProfileTab({ barber, onUpdateProfile, onUpdateServices, isSaving }: {
             <View style={styles.avatarPlaceholder}><Text style={styles.initialsText}>{initials}</Text></View>
           )}
           <View style={styles.cameraIconBadge}>
-            {isPickingImage ? <ActivityIndicator size="small" color={Colors.black} /> : <Camera color={Colors.black} size={12} />}
+            {isPickingImage ? <ActivityIndicator size="small" color={Colors.white} /> : <Camera color={Colors.white} size={12} />}
           </View>
         </Pressable>
         <Text style={styles.profileName}>{barber.fullName}</Text>
@@ -1046,7 +1046,7 @@ const imgStyles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.borderLight },
   dotActive: { backgroundColor: Colors.accent, width: 20, borderRadius: 4 },
   playBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: Colors.accent, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
-  playText: { color: Colors.black, fontSize: 11, fontWeight: '700' as const },
+  playText: { color: Colors.white, fontSize: 11, fontWeight: '700' as const },
 });
 
 const calStyles = StyleSheet.create({
@@ -1065,7 +1065,7 @@ const calStyles = StyleSheet.create({
   countBadge: { marginTop: 3, backgroundColor: Colors.accentMuted, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, minWidth: 20, alignItems: 'center' },
   countBadgeSelected: { backgroundColor: Colors.teal },
   countText: { fontSize: 9, fontWeight: '700' as const, color: Colors.accent },
-  countTextSelected: { color: Colors.black },
+  countTextSelected: { color: Colors.white },
   selectedSection: { marginTop: 20 },
   selectedTitle: { fontSize: 13, fontWeight: '600' as const, color: Colors.textSecondary, marginBottom: 12 },
 });
@@ -1094,7 +1094,7 @@ const modalStyles = StyleSheet.create({
   backBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: 12, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
   backBtnText: { fontSize: 14, fontWeight: '600' as const, color: Colors.textSecondary },
   addBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: 12, backgroundColor: Colors.teal },
-  addBtnText: { fontSize: 14, fontWeight: '700' as const, color: Colors.black },
+  addBtnText: { fontSize: 14, fontWeight: '700' as const, color: Colors.white },
 });
 
 const styles = StyleSheet.create({
@@ -1117,7 +1117,7 @@ const styles = StyleSheet.create({
   servicesHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
   servicesBackBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
   addServiceBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.teal, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
-  addServiceBtnText: { color: Colors.black, fontSize: 13, fontWeight: '700' as const },
+  addServiceBtnText: { color: Colors.white, fontSize: 13, fontWeight: '700' as const },
   servicesList: { gap: 10 },
   serviceViewCard: { backgroundColor: Colors.surface, borderRadius: 14, padding: 16, borderWidth: 1, borderColor: Colors.border },
   serviceViewTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -1141,7 +1141,7 @@ const styles = StyleSheet.create({
   serviceEditCancelBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 10, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border },
   serviceEditCancelText: { color: Colors.textSecondary, fontSize: 13, fontWeight: '600' as const },
   serviceEditSaveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 10, backgroundColor: Colors.teal },
-  serviceEditSaveText: { color: Colors.black, fontSize: 13, fontWeight: '700' as const },
+  serviceEditSaveText: { color: Colors.white, fontSize: 13, fontWeight: '700' as const },
   viewToggle: { flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: 10, padding: 3, borderWidth: 1, borderColor: Colors.border },
   viewToggleBtn: { width: 40, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   viewToggleBtnActive: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.tealBorder },
@@ -1183,7 +1183,7 @@ const styles = StyleSheet.create({
   actionBtnComplete: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.teal },
   actionBtnCancel: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.errorMuted, borderWidth: 1, borderColor: Colors.errorBorder },
   actionBtnDelete: { width: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: Colors.errorMuted, borderWidth: 1, borderColor: Colors.errorBorder },
-  actionBtnText: { fontSize: 12, fontWeight: '700' as const, color: Colors.black },
+  actionBtnText: { fontSize: 12, fontWeight: '700' as const, color: Colors.white },
   expandHint: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.border },
   expandHintText: { color: Colors.textMuted, fontSize: 11, fontWeight: '500' as const },
   imageSection: { backgroundColor: Colors.card },
@@ -1220,7 +1220,7 @@ const styles = StyleSheet.create({
   editHeaderActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   editCancelBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
   editSaveBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.teal, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 12 },
-  editSaveBtnText: { color: Colors.black, fontSize: 14, fontWeight: '700' as const },
+  editSaveBtnText: { color: Colors.white, fontSize: 14, fontWeight: '700' as const },
   editSection: { marginBottom: 20 },
   editLabel: { fontSize: 10, fontWeight: '700' as const, color: Colors.textMuted, letterSpacing: 1.2, marginBottom: 8 },
   editInput: { backgroundColor: Colors.surface, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: Colors.text, borderWidth: 1, borderColor: Colors.border },

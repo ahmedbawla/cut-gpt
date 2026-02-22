@@ -158,9 +158,9 @@ export default function HomeScreen() {
               >
                 {isFavFilter && (
                   <Heart
-                    color={isActive ? Colors.black : Colors.error}
+                    color={isActive ? Colors.white : Colors.error}
                     size={11}
-                    fill={isActive ? Colors.black : Colors.error}
+                    fill={isActive ? Colors.white : Colors.error}
                   />
                 )}
                 <Text
@@ -188,7 +188,7 @@ export default function HomeScreen() {
             testID="custom-haircut-banner"
           >
             <View style={styles.customBannerIconWrap}>
-              <Wand2 color={Colors.black} size={22} />
+              <Wand2 color={Colors.white} size={22} />
             </View>
             <View style={styles.customBannerContent}>
               <Text style={styles.customBannerTitle}>Create Custom Style</Text>
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
   },
   categoryTextActive: {
-    color: Colors.black,
+    color: Colors.white,
     fontWeight: '700' as const,
   },
   categoryTextFavorites: {

@@ -171,14 +171,14 @@ const styles = StyleSheet.create({
   },
   categoryBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(201,165,92,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
     marginBottom: 4,
   },
   categoryText: {
-    color: Colors.accent,
+    color: Colors.white,
     fontSize: 9,
     fontWeight: '700' as const,
     letterSpacing: 0.8,

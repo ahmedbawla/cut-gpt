@@ -147,7 +147,7 @@ function PhotoGalleryModal({
         <Text style={galleryStyles.label}>{labels[currentIndex] ?? `Photo ${currentIndex + 1}`}</Text>
         <View style={galleryStyles.actionRow}>
           <Pressable onPress={handleSaveToDevice} style={galleryStyles.actionBtn}>
-            <ImageDown color={Colors.black} size={16} />
+            <ImageDown color={Colors.white} size={16} />
             <Text style={galleryStyles.actionBtnText}>Save</Text>
           </Pressable>
           <Pressable onPress={async () => {
@@ -178,7 +178,7 @@ function PhotoGalleryModal({
               Alert.alert('Saved!', `${count} photos saved to camera roll.`);
             } catch (e) { console.error(e); Alert.alert('Error', 'Failed to save.'); }
           }} style={galleryStyles.actionBtn}>
-            <ImageDown color={Colors.black} size={16} />
+            <ImageDown color={Colors.white} size={16} />
             <Text style={galleryStyles.actionBtnText}>Save All</Text>
           </Pressable>
           <Pressable onPress={handleShare} style={[galleryStyles.actionBtn, galleryStyles.shareActionBtn]}>
@@ -355,7 +355,7 @@ function SavedLookCard({ look, onDelete }: { look: SavedLook; onDelete: (id: str
             <Text style={styles.lookActionText}>Edit Look</Text>
           </Pressable>
           <Pressable onPress={handleFindBarber} style={styles.lookActionBtnPrimary} testID={`book-look-${look.id}`}>
-            <Navigation color={Colors.black} size={14} />
+            <Navigation color={Colors.white} size={14} />
             <Text style={styles.lookActionTextPrimary}>Book Barber</Text>
           </Pressable>
         </View>
@@ -406,7 +406,7 @@ const galleryStyles = StyleSheet.create({
   label: { color: Colors.textSecondary, fontSize: 13, fontWeight: '600' as const, marginTop: 12, letterSpacing: 0.5 },
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.accent, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10 },
-  actionBtnText: { color: Colors.black, fontSize: 13, fontWeight: '700' as const },
+  actionBtnText: { color: Colors.white, fontSize: 13, fontWeight: '700' as const },
   shareActionBtn: { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
   shareActionText: { color: Colors.white },
   dots: { flexDirection: 'row', gap: 6, paddingVertical: 24 },
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   imagesRow: { flexDirection: 'row', alignItems: 'center' },
   imageContainer: { flex: 1 },
   imageLabelWrap: { position: 'absolute', top: 8, left: 8, zIndex: 1, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 4 },
-  imageLabelWrapAfter: { backgroundColor: 'rgba(201,165,92,0.6)' },
+  imageLabelWrapAfter: { backgroundColor: 'rgba(26,26,26,0.65)' },
   imageLabel: { fontSize: 8, fontWeight: '700' as const, letterSpacing: 1, color: Colors.white },
   imageLabelAfter: { color: Colors.white },
   lookImage: { width: '100%', height: 190 },
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   lookActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.accentBorder },
   lookActionText: { fontSize: 12, fontWeight: '600' as const, color: Colors.accent },
   lookActionBtnPrimary: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.accent },
-  lookActionTextPrimary: { fontSize: 12, fontWeight: '700' as const, color: Colors.black },
+  lookActionTextPrimary: { fontSize: 12, fontWeight: '700' as const, color: Colors.white },
   emptyContainer: { flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   emptyIconWrap: { width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: Colors.border },
   emptyTitle: { fontSize: 18, fontWeight: '700' as const, color: Colors.text, marginBottom: 6 },

@@ -750,7 +750,7 @@ export default function TryOnScreen() {
           >
             <View style={styles.customHeroSection}>
               <View style={styles.customIconCircle}>
-                <Sparkles color={Colors.black} size={28} />
+                <Sparkles color={Colors.white} size={28} />
               </View>
               <Text style={styles.customHeroTitle}>Design Your Cut</Text>
               <Text style={styles.customHeroSubtitle}>
@@ -800,7 +800,7 @@ export default function TryOnScreen() {
                     disabled={!customInput.trim()}
                     testID="custom-send-btn"
                   >
-                    <Send color={Colors.black} size={16} />
+                    <Send color={Colors.white} size={16} />
                   </Pressable>
                 </View>
               ) : (
@@ -812,7 +812,7 @@ export default function TryOnScreen() {
                   ]}
                   testID="proceed-to-photo-btn"
                 >
-                  <Camera color={Colors.black} size={18} />
+                  <Camera color={Colors.white} size={18} />
                   <Text style={styles.generateBtnText}>Continue to Photo</Text>
                 </Pressable>
               )}
@@ -830,7 +830,7 @@ export default function TryOnScreen() {
             {isCustom && customDescription ? (
               <View style={styles.customPreviewBanner}>
                 <View style={styles.customPreviewIcon}>
-                  <Sparkles color={Colors.black} size={18} />
+                  <Sparkles color={Colors.white} size={18} />
                 </View>
                 <View style={styles.customPreviewContent}>
                   <Text style={styles.customPreviewLabel}>CUSTOM STYLE</Text>
@@ -895,7 +895,7 @@ export default function TryOnScreen() {
                   ]}
                   testID="generate-btn"
                 >
-                  <Sparkles color={Colors.black} size={18} />
+                  <Sparkles color={Colors.white} size={18} />
                   <Text style={styles.generateBtnText}>
                     Generate 360° Preview
                   </Text>
@@ -1037,7 +1037,7 @@ export default function TryOnScreen() {
                     disabled={isSavingToDevice}
                     testID="save-front-device-btn"
                   >
-                    <ImageDown color={Colors.black} size={14} />
+                    <ImageDown color={Colors.white} size={14} />
                     <Text style={styles.frontActionBtnText}>Save</Text>
                   </Pressable>
                   <Pressable
@@ -1077,7 +1077,7 @@ export default function TryOnScreen() {
                 ]}
                 testID="save-all-btn"
               >
-                <Save color={Colors.black} size={18} />
+                <Save color={Colors.white} size={18} />
                 <Text style={styles.saveAllBtnText}>Save to My Looks</Text>
               </Pressable>
 
@@ -1133,7 +1133,7 @@ export default function TryOnScreen() {
               ]}
               testID="find-barber-btn"
             >
-              <Navigation color={Colors.black} size={18} />
+              <Navigation color={Colors.white} size={18} />
               <Text style={styles.findBarberBtnText}>Find a Barber Near You</Text>
             </Pressable>
 
@@ -1197,9 +1197,9 @@ export default function TryOnScreen() {
                   testID="send-edit-btn"
                 >
                   {isRegenerating ? (
-                    <RefreshCw color={Colors.black} size={16} />
+                    <RefreshCw color={Colors.white} size={16} />
                   ) : (
-                    <Send color={Colors.black} size={16} />
+                    <Send color={Colors.white} size={16} />
                   )}
                 </Pressable>
               </View>
@@ -1385,7 +1385,7 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   generateBtnText: {
-    color: Colors.black,
+    color: Colors.white,
     fontSize: 16,
     fontWeight: '700' as const,
   },
@@ -1562,7 +1562,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.15)',
   },
   frontActionBtnText: {
-    color: Colors.black,
+    color: Colors.white,
     fontSize: 12,
     fontWeight: '700' as const,
   },
@@ -1593,7 +1593,7 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   saveAllBtnText: {
-    color: Colors.black,
+    color: Colors.white,
     fontSize: 16,
     fontWeight: '700' as const,
   },
@@ -1680,7 +1680,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   chatBubbleTextUser: {
-    color: Colors.black,
+    color: Colors.text,
   },
   loadingRow: {
     flexDirection: 'row',
@@ -1733,7 +1733,7 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   findBarberBtnText: {
-    color: Colors.black,
+    color: Colors.white,
     fontSize: 16,
     fontWeight: '700' as const,
   },

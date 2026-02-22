@@ -151,7 +151,7 @@ export default function ProfileScreen() {
               <View style={styles.avatarPlaceholder}><Text style={styles.initialsText}>{initials}</Text></View>
             )}
             <View style={styles.cameraIcon}>
-              {isUpdating ? <ActivityIndicator size="small" color={Colors.black} /> : <Camera color={Colors.black} size={12} />}
+              {isUpdating ? <ActivityIndicator size="small" color={Colors.white} /> : <Camera color={Colors.white} size={12} />}
             </View>
           </Pressable>
         </View>

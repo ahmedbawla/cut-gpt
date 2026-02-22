@@ -279,11 +279,11 @@ export default function LoginScreen() {
                   testID="submit-btn"
                 >
                   {isSubmitting ? (
-                    <ActivityIndicator color={Colors.black} size="small" />
+                    <ActivityIndicator color={Colors.white} size="small" />
                   ) : (
                     <>
                       <Text style={styles.submitBtnText}>Sign In</Text>
-                      <ArrowRight color={Colors.black} size={18} />
+                      <ArrowRight color={Colors.white} size={18} />
                     </>
                   )}
                 </Pressable>
@@ -304,14 +304,14 @@ export default function LoginScreen() {
                     onPress={() => { setSignupMethod('email'); setError(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                     style={[styles.methodBtn, signupMethod === 'email' && styles.methodBtnActive]}
                   >
-                    <Mail color={signupMethod === 'email' ? Colors.black : Colors.textMuted} size={14} />
+                    <Mail color={signupMethod === 'email' ? Colors.white : Colors.textMuted} size={14} />
                     <Text style={[styles.methodBtnText, signupMethod === 'email' && styles.methodBtnTextActive]}>Email</Text>
                   </Pressable>
                   <Pressable
                     onPress={() => { setSignupMethod('phone'); setError(null); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                     style={[styles.methodBtn, signupMethod === 'phone' && styles.methodBtnActive]}
                   >
-                    <Phone color={signupMethod === 'phone' ? Colors.black : Colors.textMuted} size={14} />
+                    <Phone color={signupMethod === 'phone' ? Colors.white : Colors.textMuted} size={14} />
                     <Text style={[styles.methodBtnText, signupMethod === 'phone' && styles.methodBtnTextActive]}>Phone</Text>
                   </Pressable>
                 </View>
@@ -415,7 +415,7 @@ export default function LoginScreen() {
                   testID="signup-next-btn"
                 >
                   <Text style={styles.submitBtnText}>Continue</Text>
-                  <ShieldCheck color={Colors.black} size={18} />
+                  <ShieldCheck color={Colors.white} size={18} />
                 </Pressable>
               </>
             ) : (
@@ -466,11 +466,11 @@ export default function LoginScreen() {
                   testID="verify-btn"
                 >
                   {isSubmitting ? (
-                    <ActivityIndicator color={Colors.black} size="small" />
+                    <ActivityIndicator color={Colors.white} size="small" />
                   ) : (
                     <>
                       <Text style={styles.submitBtnText}>Verify & Create Account</Text>
-                      <UserPlus color={Colors.black} size={18} />
+                      <UserPlus color={Colors.white} size={18} />
                     </>
                   )}
                 </Pressable>
@@ -518,7 +518,7 @@ export default function LoginScreen() {
               ]}
               testID="barber-login-btn"
             >
-              <Briefcase color={Colors.teal} size={18} />
+              <Briefcase color={Colors.text} size={18} />
               <Text style={styles.barberLoginText}>Barber Portal</Text>
             </Pressable>
           </View>
@@ -544,11 +544,11 @@ const styles = StyleSheet.create({
   },
   brandSection: {
     alignItems: 'center',
-    marginBottom: 36,
+    marginBottom: 40,
   },
   logoImage: {
-    width: SCREEN_WIDTH * 0.5,
-    height: 80,
+    width: SCREEN_WIDTH * 0.55,
+    height: 60,
   },
   formCard: {
     width: '100%',
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   methodBtnTextActive: {
-    color: Colors.black,
+    color: Colors.white,
   },
   errorBanner: {
     backgroundColor: Colors.errorMuted,
@@ -687,7 +687,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   submitBtnText: {
-    color: Colors.black,
+    color: Colors.white,
     fontSize: 16,
     fontWeight: '700' as const,
   },
@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   barberLoginBtn: {
-    backgroundColor: Colors.tealMuted,
+    backgroundColor: Colors.white,
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row' as const,
@@ -758,13 +758,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center' as const,
     gap: 10,
     borderWidth: 1,
-    borderColor: Colors.tealBorder,
+    borderColor: Colors.border,
   },
   barberLoginBtnPressed: {
     opacity: 0.8,
   },
   barberLoginText: {
-    color: Colors.teal,
+    color: Colors.text,
     fontSize: 15,
     fontWeight: '600' as const,
   },

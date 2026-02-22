@@ -364,10 +364,10 @@ export default function BookAppointmentScreen() {
               testID="confirm-booking-btn"
             >
               {isBooking ? (
-                <ActivityIndicator color={Colors.black} size="small" />
+                <ActivityIndicator color={Colors.white} size="small" />
               ) : (
                 <>
-                  <CheckCircle color={Colors.black} size={18} />
+                  <CheckCircle color={Colors.white} size={18} />
                   <Text style={styles.confirmBtnText}>Confirm Booking</Text>
                 </>
               )}
@@ -406,19 +406,19 @@ const styles = StyleSheet.create({
   dayCardSelected: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   dayName: { color: Colors.textMuted, fontSize: 10, fontWeight: '600' as const, marginBottom: 4 },
   dayLabel: { color: Colors.textSecondary, fontSize: 12, fontWeight: '700' as const },
-  dayTextSelected: { color: Colors.black },
+  dayTextSelected: { color: Colors.white },
   timeSlotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   timeSlot: { backgroundColor: Colors.surface, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: Colors.border },
   timeSlotSelected: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   timeSlotText: { color: Colors.textSecondary, fontSize: 12, fontWeight: '600' as const },
-  timeSlotTextSelected: { color: Colors.black },
+  timeSlotTextSelected: { color: Colors.white },
   bookingFooter: { marginTop: 8 },
   bookingSummary: { backgroundColor: Colors.surface, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: Colors.border },
   bookingSummaryText: { color: Colors.textSecondary, fontSize: 13, fontWeight: '500' as const },
   bookingTotal: { color: Colors.accent, fontSize: 24, fontWeight: '800' as const, marginTop: 4 },
-  confirmBtn: { backgroundColor: Colors.success, borderRadius: 12, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  confirmBtn: { backgroundColor: Colors.accent, borderRadius: 12, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   confirmBtnDisabled: { opacity: 0.5 },
-  confirmBtnText: { color: Colors.black, fontSize: 16, fontWeight: '700' as const },
+  confirmBtnText: { color: Colors.white, fontSize: 16, fontWeight: '700' as const },
   successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
   successIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: Colors.successMuted, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   successTitle: { fontSize: 24, fontWeight: '800' as const, color: Colors.text, marginBottom: 8, letterSpacing: -0.3 },
@@ -430,5 +430,5 @@ const styles = StyleSheet.create({
   summaryDivider: { height: 1, backgroundColor: Colors.border },
   doneBtn: { backgroundColor: Colors.accent, borderRadius: 12, paddingVertical: 16, paddingHorizontal: 48, alignItems: 'center' },
   doneBtnPressed: { opacity: 0.85 },
-  doneBtnText: { color: Colors.black, fontSize: 16, fontWeight: '700' as const },
+  doneBtnText: { color: Colors.white, fontSize: 16, fontWeight: '700' as const },
 });
